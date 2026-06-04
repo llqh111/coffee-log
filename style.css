@@ -1,0 +1,311 @@
+/* =========================================================
+   手冲手记 · 样式表
+   美学方向：精品咖啡手帐 / 实验记录本
+   奶油纸底 · 浓缩咖啡棕 · 铜壶赭橘 · 数据用等宽字体
+   ========================================================= */
+
+/* ---------- 设计变量（颜色、字体集中在这里，方便统一改） ---------- */
+:root {
+  --paper:      #efe6d6;   /* 主背景：奶油纸 */
+  --paper-2:    #f7f0e3;   /* 卡片底：更浅 */
+  --ink:        #2a1c12;   /* 主文字：浓缩咖啡 */
+  --ink-soft:   #6f5a48;   /* 次要文字：奶咖棕 */
+  --line:       #d8c8b0;   /* 分隔线/边框 */
+  --accent:     #b85c38;   /* 强调：铜壶赭橘 */
+  --accent-dk:  #8f4427;   /* 强调深 */
+  --gold:       #c08a3e;   /* 评分金 */
+  --good:       #5b7f5a;   /* 好评绿 */
+  --shadow:     20px 28px 60px -30px rgba(42, 28, 18, .45);
+
+  --font-display: "Fraunces", "Songti SC", "STSong", Georgia, serif;
+  --font-body:    "Hanken Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono:    "Spline Sans Mono", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* ---------- 基础重置 ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 110% -10%, rgba(184, 92, 56, .10), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(192, 138, 62, .10), transparent 60%),
+    var(--paper);
+  line-height: 1.5;
+}
+
+/* 纸张噪点纹理：用 SVG 生成的细颗粒，盖在最底层做质感 */
+.grain {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* 让所有真实内容浮在噪点之上 */
+.site-header, .tabs, .content, .site-footer { position: relative; z-index: 1; }
+
+/* ---------- 顶部 ---------- */
+.site-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  max-width: 1100px; margin: 0 auto; padding: 34px 24px 10px;
+}
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-mark {
+  font-size: 30px; width: 56px; height: 56px; flex: none;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--ink); color: var(--paper);
+  box-shadow: var(--shadow);
+}
+.brand-text h1 {
+  margin: 0; font-family: var(--font-display);
+  font-weight: 600; font-size: clamp(28px, 5vw, 40px);
+  letter-spacing: -.02em; line-height: 1;
+}
+.tagline { margin: 6px 0 0; color: var(--ink-soft); font-size: 14px; font-style: italic; }
+
+.toolbar { display: flex; gap: 10px; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  font-family: var(--font-body); font-size: 14px; font-weight: 600;
+  padding: 10px 18px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--ink); transition: transform .15s ease, background .2s, color .2s, box-shadow .2s;
+}
+.btn:active { transform: translateY(1px); }
+.btn-solid { background: var(--ink); color: var(--paper); }
+.btn-solid:hover { background: var(--accent-dk); border-color: var(--accent-dk); box-shadow: var(--shadow); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--ink); }
+.btn-back {
+  background: none; border: none; color: var(--ink-soft); cursor: pointer;
+  font-family: var(--font-body); font-size: 15px; font-weight: 600; padding: 6px 0; margin-bottom: 10px;
+}
+.btn-back:hover { color: var(--accent); }
+.btn-mini {
+  font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+  border: 1.5px solid var(--line); background: transparent; color: var(--ink-soft); cursor: pointer;
+}
+.btn-mini:hover { border-color: var(--ink); color: var(--ink); }
+.btn-mini.danger:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- 标签页 ---------- */
+.tabs {
+  display: flex; gap: 8px; max-width: 1100px;
+  margin: 18px auto 0; padding: 0 24px;
+  border-bottom: 1.5px solid var(--line);
+}
+.tab {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-display); font-size: 19px; font-weight: 600; color: var(--ink-soft);
+  padding: 12px 6px; margin-bottom: -1.5px;
+}
+.tab .tab-count {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  background: var(--line); color: var(--ink); border-radius: 999px; padding: 1px 8px;
+}
+.tab.is-active { color: var(--ink); border-bottom: 2.5px solid var(--accent); }
+.tab.is-active .tab-count { background: var(--accent); color: var(--paper); }
+
+/* ---------- 内容区 ---------- */
+.content { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+.view { display: none; animation: fade-up .4s ease both; }
+.view.is-active { display: block; }
+@keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.view-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.view-title {
+  margin: 0; font-family: var(--font-display); font-weight: 600;
+  font-size: clamp(22px, 4vw, 30px); letter-spacing: -.01em;
+}
+
+/* ---------- 咖啡豆卡片网格 ---------- */
+.beans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.bean-card {
+  position: relative; background: var(--paper-2); border: 1.5px solid var(--line);
+  border-radius: 16px; padding: 20px; cursor: pointer; overflow: hidden;
+  transition: transform .18s ease, box-shadow .25s, border-color .2s;
+}
+.bean-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--accent); }
+.bean-card .bean-name {
+  font-family: var(--font-display); font-size: 21px; font-weight: 600; line-height: 1.15; margin: 0 0 2px;
+}
+.bean-card .bean-roaster { color: var(--ink-soft); font-size: 13px; margin-bottom: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.chip {
+  font-size: 12px; padding: 3px 10px; border-radius: 999px;
+  background: rgba(184, 92, 56, .10); color: var(--accent-dk); border: 1px solid rgba(184, 92, 56, .22);
+}
+.bean-stats { display: flex; gap: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.stat .stat-num { font-family: var(--font-mono); font-size: 24px; font-weight: 600; line-height: 1; }
+.stat .stat-label { font-size: 11.5px; color: var(--ink-soft); margin-top: 4px; }
+.stat .stat-num.accent { color: var(--accent); }
+
+/* ---------- 冲煮记录列表 ---------- */
+.filter-bar { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
+.field-inline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); }
+.field-inline select {
+  font-family: var(--font-body); font-size: 14px; color: var(--ink);
+  padding: 7px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper-2);
+}
+
+.brews-list { display: flex; flex-direction: column; gap: 14px; }
+.brew-card {
+  display: grid; grid-template-columns: 92px 1fr auto; gap: 18px; align-items: center;
+  background: var(--paper-2); border: 1.5px solid var(--line); border-radius: 14px; padding: 16px 20px;
+  transition: border-color .2s, box-shadow .25s;
+}
+.brew-card:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+.brew-ratio {
+  text-align: center; padding-right: 16px; border-right: 1px dashed var(--line);
+}
+.brew-ratio .ratio-num { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--accent); }
+.brew-ratio .ratio-label { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+.brew-main .brew-bean { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+.brew-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
+.brew-meta b { font-family: var(--font-mono); font-weight: 600; color: var(--ink); font-size: 13px; }
+.brew-notes { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); font-style: italic; max-width: 60ch; }
+.brew-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.brew-date { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); }
+.row-actions { display: flex; gap: 6px; }
+
+/* 评分徽章 */
+.rating-badge {
+  display: inline-flex; align-items: baseline; gap: 2px;
+  font-family: var(--font-mono); font-weight: 600;
+  background: var(--ink); color: var(--paper); padding: 4px 10px; border-radius: 8px;
+}
+.rating-badge .r-num { font-size: 16px; }
+.rating-badge .r-max { font-size: 11px; opacity: .65; }
+.rating-badge.high { background: var(--good); }
+.rating-badge.none { background: var(--line); color: var(--ink-soft); }
+
+/* ---------- 空状态 ---------- */
+.empty {
+  text-align: center; padding: 56px 20px; color: var(--ink-soft);
+  border: 1.5px dashed var(--line); border-radius: 16px; background: rgba(247, 240, 227, .5);
+}
+.empty .empty-emoji { font-size: 40px; }
+.empty p { margin: 12px 0 0; font-family: var(--font-display); font-size: 18px; }
+.empty small { display: block; margin-top: 4px; font-size: 13px; }
+
+/* ---------- 单豆详情 ---------- */
+.detail-head {
+  background: var(--ink); color: var(--paper); border-radius: 18px; padding: 28px 30px; margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+.detail-head h2 { margin: 0; font-family: var(--font-display); font-size: 30px; font-weight: 600; }
+.detail-head .detail-roaster { opacity: .7; margin: 4px 0 16px; }
+.detail-grid { display: flex; flex-wrap: wrap; gap: 26px; }
+.detail-grid .stat .stat-num { color: var(--paper); }
+.detail-grid .stat .stat-num.accent { color: var(--gold); }
+.detail-grid .stat .stat-label { color: rgba(239, 230, 214, .65); }
+.detail-section-title {
+  font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0 0 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.detail-section-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+/* ---------- 弹窗表单 ---------- */
+.dialog {
+  width: min(640px, 94vw); border: none; border-radius: 18px; padding: 0;
+  background: var(--paper-2); color: var(--ink); box-shadow: var(--shadow);
+}
+.dialog::backdrop { background: rgba(42, 28, 18, .45); backdrop-filter: blur(2px); }
+.form { padding: 26px 28px 24px; }
+.dialog-title { margin: 0 0 20px; font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > span { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.field em { color: var(--accent); font-style: normal; }
+.field em.hint { color: var(--ink-soft); font-weight: 400; font-size: 11px; }
+.field input, .field select, .field textarea {
+  font-family: var(--font-body); font-size: 15px; color: var(--ink);
+  padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper);
+  width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(184, 92, 56, .15);
+}
+.field textarea { resize: vertical; }
+/* 数字类输入用等宽，呼应"数据"气质 */
+.field input[type="number"], .field input[name="totalTime"] { font-family: var(--font-mono); }
+
+/* 评分滑块 */
+.rating-field input[type="range"] { accent-color: var(--accent); padding: 0; }
+.rating-output { font-family: var(--font-mono); font-weight: 600; color: var(--accent); font-size: 14px; }
+
+/* 实时反馈区 */
+.live-readout {
+  display: flex; gap: 14px; margin: 4px 0 18px;
+}
+.live-readout .readout {
+  flex: 1; text-align: center; background: rgba(184, 92, 56, .08);
+  border: 1px solid rgba(184, 92, 56, .18); border-radius: 12px; padding: 10px;
+}
+.readout-label { display: block; font-size: 11.5px; color: var(--ink-soft); }
+.readout-value { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--accent-dk); }
+
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+/* ---------- 评分关联分析 ---------- */
+.analysis-block {
+  background: var(--paper-2); border: 1.5px solid var(--line); border-radius: 16px;
+  padding: 22px 24px; margin-bottom: 18px;
+}
+.analysis-block h3 {
+  margin: 0 0 4px; font-family: var(--font-display); font-size: 20px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.analysis-block .block-sub { margin: 0 0 16px; font-size: 13px; color: var(--ink-soft); }
+
+/* 小样本 / 空状态提示条 */
+.notice {
+  display: flex; align-items: center; gap: 10px;
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 14px;
+}
+.notice.warn { background: rgba(184, 92, 56, .10); border: 1px solid rgba(184, 92, 56, .3); color: var(--accent-dk); }
+
+/* 高分配方：参数共性网格 */
+.recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.recipe-item { border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; }
+.recipe-item .ri-label { font-size: 12px; color: var(--ink-soft); }
+.recipe-item .ri-value { font-family: var(--font-mono); font-size: 19px; font-weight: 600; color: var(--ink); margin-top: 4px; }
+.recipe-item .ri-range { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+/* 下次试试建议卡 */
+.suggest-card {
+  background: var(--ink); color: var(--paper); border-radius: 16px; padding: 22px 24px; margin-bottom: 18px;
+  box-shadow: var(--shadow);
+}
+.suggest-card h3 { margin: 0 0 12px; font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+.suggest-line { font-size: 16px; line-height: 1.9; }
+.suggest-line b { font-family: var(--font-mono); color: var(--gold); font-weight: 600; padding: 0 2px; }
+
+/* 分类对比条形 */
+.compare-row { display: grid; grid-template-columns: 120px 1fr 64px; align-items: center; gap: 12px; margin-bottom: 10px; }
+.compare-row .cr-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compare-row .cr-bar-wrap { background: var(--line); border-radius: 999px; height: 12px; overflow: hidden; }
+.compare-row .cr-bar { height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent)); border-radius: 999px; }
+.compare-row .cr-val { font-family: var(--font-mono); font-size: 14px; font-weight: 600; text-align: right; }
+.compare-row .cr-count { font-size: 11px; color: var(--ink-soft); font-weight: 400; }
+.compare-group + .compare-group { margin-top: 20px; }
+.compare-group > h4 { margin: 0 0 12px; font-size: 14px; color: var(--ink-soft); font-weight: 600; }
+
+/* ---------- 页脚 ---------- */
+.site-footer { max-width: 1100px; margin: 0 auto; padding: 20px 24px 40px; color: var(--ink-soft); font-size: 12.5px; text-align: center; }
+
+/* ---------- 响应式：手机 ---------- */
+@media (max-width: 620px) {
+  .site-header { padding-top: 22px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .brew-card { grid-template-columns: 1fr; gap: 12px; }
+  .brew-ratio { display: flex; align-items: baseline; gap: 8px; text-align: left; border-right: none; border-bottom: 1px dashed var(--line); padding: 0 0 10px; }
+  .brew-side { flex-direction: row; align-items: center; justify-content: space-between; }
+  .toolbar { width: 100%; }
+}

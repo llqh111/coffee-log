@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 背景：浓缩咖啡棕圆角方块（maskable 安全区留白） -->
+  <rect width="512" height="512" rx="112" fill="#2a1c12"/>
+  <!-- 一抹铜橘色弧光 -->
+  <circle cx="400" cy="120" r="150" fill="#b85c38" opacity="0.18"/>
+  <!-- 咖啡杯 -->
+  <g fill="none" stroke="#efe6d6" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 杯身 -->
+    <path d="M150 200 h170 v70 a85 85 0 0 1 -85 85 h0 a85 85 0 0 1 -85 -85 z"/>
+    <!-- 把手 -->
+    <path d="M320 215 h28 a44 44 0 0 1 0 88 h-22"/>
+    <!-- 杯垫 -->
+    <path d="M132 388 h206"/>
+  </g>
+  <!-- 热气 -->
+  <g fill="none" stroke="#c08a3e" stroke-width="16" stroke-linecap="round">
+    <path d="M205 150 q-18 -22 0 -44"/>
+    <path d="M255 150 q-18 -22 0 -44"/>
+    <path d="M305 150 q-18 -22 0 -44"/>
+  </g>
+</svg>

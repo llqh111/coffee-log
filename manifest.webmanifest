@@ -1,0 +1,20 @@
+{
+  "name": "手冲手记",
+  "short_name": "手冲手记",
+  "description": "记录每一杯手冲咖啡的变量：豆子、养豆、研磨度、水温、粉水比、评分",
+  "lang": "zh-CN",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efe6d6",
+  "theme_color": "#2a1c12",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

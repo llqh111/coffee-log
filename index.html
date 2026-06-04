@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>手冲手记 · 咖啡冲煮记录本</title>
+
+  <!-- 字体：Fraunces（衬线标题）+ Hanken Grotesk（正文）+ Spline Sans Mono（数据）。
+       断网时会自动退回系统字体，界面不会塌。 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- 手机 App 化（PWA）：可"添加到主屏幕"、可离线使用 -->
+  <meta name="theme-color" content="#2a1c12" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="手冲手记" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 纸张噪点纹理层（纯装饰，盖在最底层） -->
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">☕</div>
+      <div class="brand-text">
+        <h1>手冲手记</h1>
+        <p class="tagline">每一杯的变量，都值得被记下来</p>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button id="btn-export" class="btn btn-ghost" type="button" title="把所有数据存成一个备份文件">导出备份</button>
+      <button id="btn-import" class="btn btn-ghost" type="button" title="从备份文件恢复数据">导入</button>
+      <input id="file-import" type="file" accept="application/json,.json" hidden />
+    </div>
+  </header>
+
+  <!-- 标签页切换 -->
+  <nav class="tabs" id="tabs">
+    <button class="tab is-active" data-view="beans" type="button">
+      <span class="tab-label">咖啡豆</span>
+      <span class="tab-count" id="count-beans">0</span>
+    </button>
+    <button class="tab" data-view="brews" type="button">
+      <span class="tab-label">冲煮记录</span>
+      <span class="tab-count" id="count-brews">0</span>
+    </button>
+    <button class="tab" data-view="analysis" type="button">
+      <span class="tab-label">分析</span>
+    </button>
+  </nav>
+
+  <main class="content">
+
+    <!-- 视图 1：咖啡豆列表 -->
+    <section id="view-beans" class="view is-active">
+      <div class="view-head">
+        <h2 class="view-title">我的豆柜</h2>
+        <button id="btn-add-bean" class="btn btn-solid" type="button">+ 新增豆子</button>
+      </div>
+      <div id="beans-grid" class="beans-grid"><!-- JS 填充 --></div>
+    </section>
+
+    <!-- 视图 2：冲煮记录列表 -->
+    <section id="view-brews" class="view">
+      <div class="view-head">
+        <h2 class="view-title">冲煮日志</h2>
+        <button id="btn-add-brew" class="btn btn-solid" type="button">+ 记录一杯</button>
+      </div>
+      <div class="filter-bar">
+        <label class="field-inline">
+          <span>豆子</span>
+          <select id="filter-bean"><option value="">全部</option></select>
+        </label>
+        <label class="field-inline">
+          <span>排序</span>
+          <select id="sort-brews">
+            <option value="date-desc">最新优先</option>
+            <option value="date-asc">最早优先</option>
+            <option value="rating-desc">评分高→低</option>
+            <option value="rating-asc">评分低→高</option>
+          </select>
+        </label>
+      </div>
+      <div id="brews-list" class="brews-list"><!-- JS 填充 --></div>
+    </section>
+
+    <!-- 视图 3：单包豆子详情（点豆子卡片进入） -->
+    <section id="view-bean-detail" class="view">
+      <button id="btn-back" class="btn btn-back" type="button">← 返回豆柜</button>
+      <div id="bean-detail-content"><!-- JS 填充 --></div>
+    </section>
+
+    <!-- 视图 4：评分关联分析 -->
+    <section id="view-analysis" class="view">
+      <div class="view-head">
+        <h2 class="view-title">找规律</h2>
+      </div>
+      <div class="filter-bar">
+        <label class="field-inline">
+          <span>分析范围</span>
+          <select id="analysis-bean"><option value="">全部豆子</option></select>
+        </label>
+      </div>
+      <div id="analysis-content"><!-- JS 填充 --></div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <span>数据只存在你这台电脑的浏览器里 · 记得偶尔「导出备份」</span>
+  </footer>
+
+  <!-- ============ 弹窗：新增/编辑 咖啡豆 ============ -->
+  <dialog id="bean-dialog" class="dialog">
+    <form id="bean-form" method="dialog" class="form">
+      <h3 class="dialog-title" id="bean-dialog-title">新增豆子</h3>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>豆子名称 <em>*</em></span>
+          <input name="name" type="text" required placeholder="如：耶加雪菲 科契尔" />
+        </label>
+        <label class="field">
+          <span>烘焙商 / 品牌</span>
+          <input name="roaster" type="text" placeholder="如：某某烘焙" />
+        </label>
+      </div>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>烘焙日期 <em class="hint">（用来自动算养豆天数）</em></span>
+          <input name="roastDate" type="date" />
+        </label>
+        <label class="field">
+          <span>烘焙度</span>
+          <select name="roastLevel">
+            <option value="">—</option>
+            <option>极浅</option><option>浅</option><option>中浅</option>
+            <option>中</option><option>中深</option><option>深</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>产地</span>
+          <input name="origin" type="text" placeholder="如：埃塞俄比亚 耶加雪菲" />
+        </label>
+        <label class="field">
+          <span>处理法</span>
+          <input name="process" type="text" placeholder="如：水洗 / 日晒 / 厌氧" />
+        </label>
+      </div>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>购买克数 (g)</span>
+          <input name="weightGrams" type="number" min="0" step="1" placeholder="如：200" />
+        </label>
+        <label class="field">
+          <span>价格 (元)</span>
+          <input name="price" type="number" min="0" step="0.01" placeholder="如：88" />
+        </label>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-solid">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ============ 弹窗：新增/编辑 冲煮 ============ -->
+  <dialog id="brew-dialog" class="dialog">
+    <form id="brew-form" method="dialog" class="form">
+      <h3 class="dialog-title" id="brew-dialog-title">记录一杯</h3>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>这杯用的豆子 <em>*</em></span>
+          <select name="beanId" id="brew-bean-select" required></select>
+        </label>
+        <label class="field">
+          <span>冲煮日期</span>
+          <input name="brewDate" id="brew-date" type="date" />
+        </label>
+      </div>
+
+      <!-- 实时反馈区：粉水比 + 养豆天数 -->
+      <div class="live-readout">
+        <div class="readout">
+          <span class="readout-label">粉水比</span>
+          <span class="readout-value" id="ratio-preview">—</span>
+        </div>
+        <div class="readout">
+          <span class="readout-label">养豆天数</span>
+          <span class="readout-value" id="rest-preview">—</span>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <label class="field">
+          <span>粉量 (g) <em>*</em></span>
+          <input name="doseGrams" id="dose-input" type="number" min="0" step="0.1" required placeholder="15" />
+        </label>
+        <label class="field">
+          <span>总水量 (g) <em>*</em></span>
+          <input name="waterGrams" id="water-input" type="number" min="0" step="1" required placeholder="225" />
+        </label>
+        <label class="field">
+          <span>水温 (°C)</span>
+          <input name="waterTemp" type="number" min="0" max="100" step="0.5" placeholder="92" />
+        </label>
+      </div>
+
+      <div class="grid-3">
+        <label class="field">
+          <span>研磨度</span>
+          <input name="grind" type="text" placeholder="如：C40 20格" />
+        </label>
+        <label class="field">
+          <span>闷蒸水量 (g)</span>
+          <input name="bloomWater" type="number" min="0" step="1" placeholder="30" />
+        </label>
+        <label class="field">
+          <span>闷蒸时间 (秒)</span>
+          <input name="bloomTime" type="number" min="0" step="1" placeholder="30" />
+        </label>
+      </div>
+
+      <div class="grid-3">
+        <label class="field">
+          <span>总冲煮时间</span>
+          <input name="totalTime" type="text" inputmode="numeric" placeholder="2:30" pattern="[0-9]{1,2}:[0-5][0-9]" title="格式：分:秒，如 2:30" />
+        </label>
+        <label class="field">
+          <span>器具</span>
+          <input name="gear" type="text" placeholder="如：V60 + 云朵壶" />
+        </label>
+        <label class="field rating-field">
+          <span>评分（1–10）</span>
+          <input name="rating" id="rating-input" type="range" min="0" max="10" step="0.5" value="0" />
+          <output id="rating-output" class="rating-output">未评分</output>
+        </label>
+      </div>
+
+      <label class="field">
+        <span>风味笔记</span>
+        <textarea name="notes" rows="3" placeholder="酸甜苦、干净度、口感、香气，以及下次想调整什么…"></textarea>
+      </label>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-solid">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+
+  <!-- 注册 Service Worker：让程序能离线打开（仅在网址 http/https 下生效，本地双击会自动跳过） -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
