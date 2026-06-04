@@ -255,6 +255,13 @@
         <textarea name="notes" rows="3" placeholder="酸甜苦、干净度、口感、香气，以及下次想调整什么…"></textarea>
       </label>
 
+      <!-- 这杯哪里不对（可多选）—— 勾了下面会实时给「下次怎么调」的方向 -->
+      <fieldset class="taste-field">
+        <legend>这杯哪里不对？（可多选，留空表示没毛病）</legend>
+        <div class="taste-options" id="taste-options"><!-- JS 填充复选框 --></div>
+        <div class="taste-advice" id="taste-advice-preview"><!-- JS 实时填充建议 --></div>
+      </fieldset>
+
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" data-close>取消</button>
         <button type="submit" class="btn btn-solid">保存</button>

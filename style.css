@@ -11,15 +11,26 @@
   --ink:        #2a1c12;   /* 主文字：浓缩咖啡 */
   --ink-soft:   #6f5a48;   /* 次要文字：奶咖棕 */
   --line:       #d8c8b0;   /* 分隔线/边框 */
+  --hairline:   rgba(42, 28, 18, .10); /* 发丝级细线：比 --line 更轻，做留白分割 */
   --accent:     #b85c38;   /* 强调：铜壶赭橘 */
   --accent-dk:  #8f4427;   /* 强调深 */
   --gold:       #c08a3e;   /* 评分金 */
   --good:       #5b7f5a;   /* 好评绿 */
-  --shadow:     20px 28px 60px -30px rgba(42, 28, 18, .45);
+  --shadow:     0 30px 70px -42px rgba(42, 28, 18, .55); /* 更柔、更聚焦的投影 */
+  --shadow-sm:  0 2px 0 rgba(42, 28, 18, .03);
 
   --font-display: "Fraunces", "Songti SC", "STSong", Georgia, serif;
   --font-body:    "Hanken Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-mono:    "Spline Sans Mono", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* 微标签：第三波咖啡馆 menu 那种大写 + 字间距拉开的等宽小字。
+   全站统一用它来标注数据项（RATIO / TEMP / 养豆天数…）。 */
+.u-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 /* ---------- 基础重置 ---------- */
@@ -39,7 +50,7 @@ body {
 
 /* 纸张噪点纹理：用 SVG 生成的细颗粒，盖在最底层做质感 */
 .grain {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .35;
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .16;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   mix-blend-mode: multiply;
 }
@@ -112,37 +123,47 @@ body {
 .tab.is-active .tab-count { background: var(--accent); color: var(--paper); }
 
 /* ---------- 内容区 ---------- */
-.content { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+.content { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
 .view { display: none; animation: fade-up .4s ease both; }
 .view.is-active { display: block; }
 @keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-.view-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.view-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
 .view-title {
   margin: 0; font-family: var(--font-display); font-weight: 600;
   font-size: clamp(22px, 4vw, 30px); letter-spacing: -.01em;
 }
 
 /* ---------- 咖啡豆卡片网格 ---------- */
-.beans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.beans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
 .bean-card {
-  position: relative; background: var(--paper-2); border: 1.5px solid var(--line);
-  border-radius: 16px; padding: 20px; cursor: pointer; overflow: hidden;
-  transition: transform .18s ease, box-shadow .25s, border-color .2s;
+  position: relative; background: var(--paper-2); border: 1px solid var(--hairline);
+  border-radius: 18px; padding: 24px; cursor: pointer; overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s ease, box-shadow .3s, border-color .25s;
 }
 .bean-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--accent); }
+/* 悬停时左缘亮起一道铜橘细线，像翻开记录本的书脊 */
+.bean-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--accent); transform: scaleY(0); transform-origin: top; transition: transform .25s ease;
+}
+.bean-card:hover::before { transform: scaleY(1); }
 .bean-card .bean-name {
-  font-family: var(--font-display); font-size: 21px; font-weight: 600; line-height: 1.15; margin: 0 0 2px;
+  font-family: var(--font-display); font-size: 22px; font-weight: 600; line-height: 1.15; margin: 0 0 3px; letter-spacing: -.01em;
 }
-.bean-card .bean-roaster { color: var(--ink-soft); font-size: 13px; margin-bottom: 14px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.bean-card .bean-roaster { color: var(--ink-soft); font-size: 13px; margin-bottom: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
 .chip {
-  font-size: 12px; padding: 3px 10px; border-radius: 999px;
-  background: rgba(184, 92, 56, .10); color: var(--accent-dk); border: 1px solid rgba(184, 92, 56, .22);
+  font-size: 11px; letter-spacing: .03em; padding: 3px 11px; border-radius: 999px;
+  background: rgba(184, 92, 56, .08); color: var(--accent-dk); border: 1px solid rgba(184, 92, 56, .20);
 }
-.bean-stats { display: flex; gap: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
-.stat .stat-num { font-family: var(--font-mono); font-size: 24px; font-weight: 600; line-height: 1; }
-.stat .stat-label { font-size: 11.5px; color: var(--ink-soft); margin-top: 4px; }
+.bean-stats { display: flex; gap: 22px; padding-top: 18px; border-top: 1px solid var(--hairline); }
+.stat .stat-num { font-family: var(--font-mono); font-size: 24px; font-weight: 600; line-height: 1; letter-spacing: -.01em; }
+.stat .stat-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 6px;
+}
 .stat .stat-num.accent { color: var(--accent); }
 
 /* ---------- 冲煮记录列表 ---------- */
@@ -153,21 +174,26 @@ body {
   padding: 7px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper-2);
 }
 
-.brews-list { display: flex; flex-direction: column; gap: 14px; }
+.brews-list { display: flex; flex-direction: column; gap: 16px; }
 .brew-card {
-  display: grid; grid-template-columns: 92px 1fr auto; gap: 18px; align-items: center;
-  background: var(--paper-2); border: 1.5px solid var(--line); border-radius: 14px; padding: 16px 20px;
-  transition: border-color .2s, box-shadow .25s;
+  display: grid; grid-template-columns: 100px 1fr auto; gap: 22px; align-items: center;
+  background: var(--paper-2); border: 1px solid var(--hairline); border-radius: 16px; padding: 20px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .25s, box-shadow .3s, transform .2s ease;
 }
-.brew-card:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+.brew-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-2px); }
 .brew-ratio {
-  text-align: center; padding-right: 16px; border-right: 1px dashed var(--line);
+  text-align: center; padding-right: 18px; border-right: 1px solid var(--hairline);
 }
-.brew-ratio .ratio-num { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--accent); }
-.brew-ratio .ratio-label { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
-.brew-main .brew-bean { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
-.brew-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
-.brew-meta b { font-family: var(--font-mono); font-weight: 600; color: var(--ink); font-size: 13px; }
+.brew-ratio .ratio-num { font-family: var(--font-mono); font-size: 23px; font-weight: 600; color: var(--accent); letter-spacing: -.01em; }
+.brew-ratio .ratio-label {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 500;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); margin-top: 4px;
+}
+.brew-main .brew-bean { font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.brew-meta { display: flex; flex-wrap: wrap; gap: 7px 20px; margin-top: 10px; font-size: 11px; letter-spacing: .04em; color: var(--ink-soft); }
+.brew-meta span { display: inline-flex; align-items: baseline; gap: 6px; text-transform: uppercase; }
+.brew-meta b { font-family: var(--font-mono); font-weight: 600; color: var(--ink); font-size: 13px; letter-spacing: 0; text-transform: none; }
 .brew-notes { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); font-style: italic; max-width: 60ch; }
 .brew-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .brew-date { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); }
@@ -248,15 +274,18 @@ body {
   flex: 1; text-align: center; background: rgba(184, 92, 56, .08);
   border: 1px solid rgba(184, 92, 56, .18); border-radius: 12px; padding: 10px;
 }
-.readout-label { display: block; font-size: 11.5px; color: var(--ink-soft); }
+.readout-label {
+  display: block; font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px;
+}
 .readout-value { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--accent-dk); }
 
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 
 /* ---------- 评分关联分析 ---------- */
 .analysis-block {
-  background: var(--paper-2); border: 1.5px solid var(--line); border-radius: 16px;
-  padding: 22px 24px; margin-bottom: 18px;
+  background: var(--paper-2); border: 1px solid var(--hairline); border-radius: 18px;
+  padding: 26px 28px; margin-bottom: 20px; box-shadow: var(--shadow-sm);
 }
 .analysis-block h3 {
   margin: 0 0 4px; font-family: var(--font-display); font-size: 20px; font-weight: 600;
@@ -274,7 +303,10 @@ body {
 /* 高分配方：参数共性网格 */
 .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .recipe-item { border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; }
-.recipe-item .ri-label { font-size: 12px; color: var(--ink-soft); }
+.recipe-item .ri-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft);
+}
 .recipe-item .ri-value { font-family: var(--font-mono); font-size: 19px; font-weight: 600; color: var(--ink); margin-top: 4px; }
 .recipe-item .ri-range { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
 
@@ -297,8 +329,96 @@ body {
 .compare-group + .compare-group { margin-top: 20px; }
 .compare-group > h4 { margin: 0 0 12px; font-size: 14px; color: var(--ink-soft); font-weight: 600; }
 
+/* ---------- 功能1：味道复选框 + 下次试试建议 ---------- */
+/* 弹窗里的味道复选框组 */
+.taste-field {
+  border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 14px 16px 16px; margin: 4px 0 4px;
+}
+.taste-field legend { padding: 0 6px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.taste-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.taste-check {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 13.5px; padding: 6px 12px; border-radius: 999px;
+  border: 1.5px solid var(--line); background: var(--paper); user-select: none;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.taste-check:hover { border-color: var(--accent); }
+.taste-check input { accent-color: var(--accent); margin: 0; }
+/* 勾中时整颗胶囊变色（:has 让父元素能响应子复选框状态） */
+.taste-check:has(input:checked) { background: rgba(184, 92, 56, .12); border-color: var(--accent); color: var(--accent-dk); font-weight: 600; }
+
+/* 弹窗内的实时建议（勾了才出现） */
+.taste-advice:not(:empty) {
+  margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+  background: rgba(192, 138, 62, .12); border: 1px dashed rgba(192, 138, 62, .4);
+}
+.taste-advice .ba-title { font-weight: 700; font-size: 13.5px; margin-bottom: 6px; }
+.taste-advice .ba-line { font-size: 13.5px; line-height: 1.7; color: var(--ink); }
+.taste-advice .ba-line b { font-family: var(--font-body); color: var(--accent-dk); }
+.taste-advice .ba-empty { color: var(--ink-soft); font-style: italic; }
+
+/* 冲煮卡片上：勾选的味道标签 */
+.taste-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.taste-chip {
+  font-size: 11.5px; padding: 2px 9px; border-radius: 999px;
+  background: rgba(192, 138, 62, .15); color: var(--accent-dk); border: 1px solid rgba(192, 138, 62, .35);
+}
+/* 冲煮卡片上：下次试试建议块 */
+.brew-advice {
+  margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(192, 138, 62, .10); border-left: 3px solid var(--gold);
+}
+.brew-advice .ba-title { font-size: 12.5px; font-weight: 700; margin-bottom: 4px; }
+.brew-advice .ba-line { font-size: 13px; line-height: 1.65; color: var(--ink-soft); }
+.brew-advice .ba-line b { color: var(--accent-dk); font-weight: 600; }
+
+/* ---------- 功能2：最佳配方卡片 + 调试轨迹 ---------- */
+.best-recipe {
+  background: linear-gradient(135deg, rgba(192, 138, 62, .14), rgba(184, 92, 56, .08)), var(--paper-2);
+  border: 1.5px solid rgba(192, 138, 62, .45); border-radius: 16px;
+  padding: 22px 24px; margin-bottom: 22px;
+}
+.best-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.best-head h3 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 600; }
+.best-rating { font-family: var(--font-mono); font-size: 28px; font-weight: 600; color: var(--accent); }
+.best-rating small { font-size: 14px; opacity: .6; }
+.best-sub { margin: 4px 0 16px; font-size: 13px; color: var(--ink-soft); }
+.br-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.br-item { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; background: rgba(247, 240, 227, .5); }
+.br-item .br-k {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft);
+}
+.br-item .br-v { font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--ink); margin-top: 3px; word-break: break-word; }
+
+/* 调试轨迹：左侧一条竖线串起每杯 */
+.trajectory { position: relative; margin: 0 0 24px; padding-left: 8px; }
+.traj-point {
+  position: relative; display: grid; grid-template-columns: 34px 1fr; gap: 14px;
+  align-items: start; padding: 0 0 18px;
+}
+/* 竖线：连接相邻的点 */
+.traj-point:not(:last-child)::before {
+  content: ""; position: absolute; left: 16px; top: 30px; bottom: -4px;
+  width: 2px; background: var(--line);
+}
+.traj-dot {
+  width: 34px; height: 34px; border-radius: 50%; flex: none; z-index: 1;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  background: var(--ink); color: var(--paper);
+}
+.traj-body { padding-top: 4px; }
+.traj-top { display: flex; align-items: center; gap: 10px; }
+.traj-date { font-family: var(--font-mono); font-size: 13px; color: var(--ink-soft); }
+.traj-meta { margin-top: 4px; font-size: 13px; color: var(--ink-soft); }
+
 /* ---------- 页脚 ---------- */
-.site-footer { max-width: 1100px; margin: 0 auto; padding: 20px 24px 40px; color: var(--ink-soft); font-size: 12.5px; text-align: center; }
+.site-footer {
+  max-width: 1080px; margin: 0 auto; padding: 28px 24px 48px; color: var(--ink-soft);
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; text-align: center;
+}
 
 /* ---------- 响应式：手机 ---------- */
 @media (max-width: 620px) {

@@ -122,6 +122,33 @@ function findBean(id) {
   return state.beans.find((b) => b.id === id) || null;
 }
 
+/* ========== 1.5) 味道问题 → 下次怎么调（功能1的「灵魂」） ==========
+   每个味道问题给一句"给方向"的调整建议（不给具体刻度数字）。
+   key 会被存进每条冲煮的 tasteIssues 数组里（如 ["sour","astringent"]）。
+   核心原理：萃取不足 → 发酸；萃取过度 → 发苦/发涩。
+   调整旋钮就是研磨、水温、时间、粉水比这几个。
+   以后冲多了，按你自己的口味经验随时改这里的措辞即可。 */
+const TASTE_ISSUES = [
+  { key: "sour",       label: "发酸 / 尖锐", advice: "研磨调细一点 / 水温 +2~3°C / 适当延长冲煮时间" },
+  { key: "bitter",     label: "发苦 / 焦",   advice: "研磨调粗一点 / 水温 −2~3°C / 适当缩短冲煮时间" },
+  { key: "weak",       label: "寡淡 / 像水", advice: "粉水比调浓（如 1:15 → 1:14），或粉量加一点" },
+  { key: "strong",     label: "太浓 / 压舌", advice: "粉水比调淡（如 1:15 → 1:16），或水量加一点" },
+  { key: "astringent", label: "涩 / 收敛",   advice: "研磨调粗一点 / 水温略降 / 注水轻柔一点（少搅拌）" },
+];
+
+// 一条冲煮勾选的味道 → 标签列表（用于显示小标签 chips）
+function tasteLabels(brew) {
+  const issues = brew.tasteIssues || []; // 老记录没这字段，兜底空数组
+  return TASTE_ISSUES.filter((t) => issues.includes(t.key)).map((t) => t.label);
+}
+// 一条冲煮勾选的味道 → 有建议的那些 [{label, advice}]
+function adviceForBrew(brew) {
+  const issues = brew.tasteIssues || [];
+  return TASTE_ISSUES
+    .filter((t) => issues.includes(t.key) && t.advice)
+    .map((t) => ({ label: t.label, advice: t.advice }));
+}
+
 /* ========== 3) render：渲染到页面 ========== */
 
 const el = (sel) => document.querySelector(sel);
@@ -221,6 +248,8 @@ function brewCardHTML(brew, showBean) {
         ${showBean ? `<div class="brew-bean">${esc(bean ? bean.name : "（豆子已删除）")}</div>` : ""}
         <div class="brew-meta">${meta || '<span class="brew-date">（未填更多参数）</span>'}</div>
         ${brew.notes ? `<div class="brew-notes">“${esc(brew.notes)}”</div>` : ""}
+        ${tasteChipsHTML(brew)}
+        ${adviceBlockHTML(brew)}
       </div>
       <div class="brew-side">
         ${ratingBadge(brew.rating)}
@@ -242,6 +271,85 @@ function ratingBadge(rating) {
 
 function emptyState(emoji, title, sub) {
   return `<div class="empty"><div class="empty-emoji">${emoji}</div><p>${title}</p><small>${sub}</small></div>`;
+}
+
+// 勾选的味道问题，显示成一排小标签
+function tasteChipsHTML(brew) {
+  const labels = tasteLabels(brew);
+  if (!labels.length) return "";
+  return `<div class="taste-chips">${
+    labels.map((l) => `<span class="taste-chip">${esc(l)}</span>`).join("")
+  }</div>`;
+}
+
+// 「💡 下次试试」建议块（每个有建议的味道一行）
+function adviceBlockHTML(brew) {
+  const list = adviceForBrew(brew);
+  if (!list.length) return "";
+  return `<div class="brew-advice">
+    <div class="ba-title">💡 下次试试</div>
+    ${list.map((a) => `<div class="ba-line"><b>${esc(a.label)}</b> → ${esc(a.advice)}</div>`).join("")}
+  </div>`;
+}
+
+// --- 功能2：最佳配方 + 调试轨迹 ---
+
+// 这包豆评分最高的一杯；同分取最近的（先比日期，再比创建时间）。没打过分返回 null
+function bestBrewOfBean(beanId) {
+  const rated = brewsOfBean(beanId).filter((b) => num(b.rating));
+  if (!rated.length) return null;
+  return [...rated].sort((a, b) =>
+    (b.rating - a.rating) ||
+    (b.brewDate || "").localeCompare(a.brewDate || "") ||
+    ((b.createdAt || 0) - (a.createdAt || 0))
+  )[0];
+}
+
+// 「🎯 最佳配方」卡片
+function bestRecipeHTML(brew) {
+  const bloom = (brew.bloomWater || brew.bloomTime)
+    ? `${esc(brew.bloomWater || "?")}g / ${esc(brew.bloomTime || "?")}s` : "—";
+  const rows = [
+    ["粉水比", ratioText(brew.doseGrams, brew.waterGrams)],
+    ["水温", brew.waterTemp ? esc(brew.waterTemp) + "°C" : "—"],
+    ["研磨", brew.grind ? esc(brew.grind) : "—"],
+    ["闷蒸", bloom],
+    ["总时间", brew.totalTime ? esc(brew.totalTime) : "—"],
+    ["器具", brew.gear ? esc(brew.gear) : "—"],
+  ].map(([k, v]) => `<div class="br-item"><div class="br-k">${k}</div><div class="br-v">${v}</div></div>`).join("");
+
+  return `<div class="best-recipe">
+    <div class="best-head"><h3>🎯 最佳配方</h3><span class="best-rating">${esc(brew.rating)}<small>/10</small></span></div>
+    <p class="best-sub">这包豆你打分最高的一杯，照着复现它 ↓</p>
+    <div class="br-grid">${rows}</div>
+    <button class="btn btn-solid" data-repro="${brew.id}">照这个再冲一杯</button>
+  </div>`;
+}
+
+// 「🧪 调试轨迹」：按时间正序，每个点显示 评分 + 器具 + 研磨度 + 水温
+function dialInTrajectoryHTML(beanId) {
+  const brews = brewsOfBean(beanId).sort((a, b) =>
+    (a.brewDate || "").localeCompare(b.brewDate || "") || ((a.createdAt || 0) - (b.createdAt || 0))
+  );
+  if (brews.length < 2) return ""; // 只有 0–1 杯没必要画轨迹
+
+  const points = brews.map((b, i) => {
+    const meta = [
+      b.gear ? esc(b.gear) : "",
+      b.grind ? "研磨 " + esc(b.grind) : "",
+      b.waterTemp ? esc(b.waterTemp) + "°C" : "",
+    ].filter(Boolean).join(" · ");
+    return `<div class="traj-point">
+      <div class="traj-dot">${i + 1}</div>
+      <div class="traj-body">
+        <div class="traj-top"><span class="traj-date">${esc(b.brewDate || "")}</span>${ratingBadge(b.rating)}</div>
+        <div class="traj-meta">${meta || "（未填器具 / 研磨 / 水温）"}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<h3 class="detail-section-title">🧪 调试轨迹（按时间）</h3>
+    <div class="trajectory">${points}</div>`;
 }
 
 // --- 单豆详情 ---
@@ -275,6 +383,8 @@ function renderBeanDetail(beanId) {
         <button class="btn-mini danger" data-del-bean="${bean.id}">删除豆子</button>
       </div>
     </div>
+    ${(() => { const best = bestBrewOfBean(beanId); return best ? bestRecipeHTML(best) : ""; })()}
+    ${dialInTrajectoryHTML(beanId)}
     <h3 class="detail-section-title">这包豆的冲煮（按评分高→低）</h3>
     <div class="brews-list">
       ${brews.length ? brews.map((b) => brewCardHTML(b, false)).join("")
@@ -533,6 +643,10 @@ function initEvents() {
   el("#brew-bean-select").addEventListener("change", updateBrewPreview);
   el("#rating-input").addEventListener("input", updateRatingOutput);
 
+  // 味道复选框：先渲染出来，再监听勾选 -> 实时更新建议
+  renderTasteOptions();
+  el("#taste-options").addEventListener("change", updateTastePreview);
+
   // 导出 / 导入
   el("#btn-export").addEventListener("click", () => store.exportJSON());
   el("#btn-import").addEventListener("click", () => el("#file-import").click());
@@ -553,9 +667,11 @@ function onDetailClick(e) {
   const delBean = e.target.closest("[data-del-bean]")?.dataset.delBean;
   const editBrew = e.target.closest("[data-edit-brew]")?.dataset.editBrew;
   const delBrew = e.target.closest("[data-del-brew]")?.dataset.delBrew;
+  const repro = e.target.closest("[data-repro]")?.dataset.repro;
   if (editBean) openBeanDialog(editBean);
   if (delBean) deleteBean(delBean);
   if (editBrew) openBrewDialog(editBrew);
+  if (repro) reproduceBrew(repro);
   if (delBrew) { deleteBrew(delBrew); renderBeanDetail(findBrewBeanId(delBrew) ?? null); }
 }
 function findBrewBeanId(brewId) {
@@ -639,12 +755,16 @@ function openBrewDialog(id) {
         "grind", "bloomWater", "bloomTime", "totalTime", "gear", "rating", "notes"]) {
         if (form.elements[key]) form.elements[key].value = brew[key] ?? "";
       }
+      // 回显勾选的味道问题
+      const issues = brew.tasteIssues || [];
+      form.querySelectorAll('input[name="taste"]').forEach((cb) => (cb.checked = issues.includes(cb.value)));
     }
   } else {
     el("#brew-date").value = todayISO(); // 新增时默认今天
   }
   updateRatingOutput();
   updateBrewPreview();
+  updateTastePreview();
   el("#brew-dialog").showModal();
 }
 
@@ -669,6 +789,7 @@ function onSaveBrew(e) {
     gear: f.gear.value.trim(),
     rating: parseFloat(f.rating.value) || 0,
     notes: f.notes.value.trim(),
+    tasteIssues: checkedTasteKeys(),
   };
   if (!data.beanId) { alert("请选择这杯用的豆子"); return; }
 
@@ -710,6 +831,61 @@ function updateBrewPreview() {
 function updateRatingOutput() {
   const v = parseFloat(el("#rating-input").value);
   el("#rating-output").textContent = v ? `${v} / 10` : "未评分";
+}
+
+/* ----- 味道复选框：渲染 / 实时建议 ----- */
+
+// 把 TASTE_ISSUES 渲染成一排复选框（只需在启动时调一次）
+function renderTasteOptions() {
+  el("#taste-options").innerHTML = TASTE_ISSUES.map((t) => `
+    <label class="taste-check">
+      <input type="checkbox" name="taste" value="${t.key}" />
+      <span>${esc(t.label)}</span>
+    </label>`).join("");
+}
+
+// 当前勾了哪些味道（读复选框）
+function checkedTasteKeys() {
+  return [...el("#brew-form").querySelectorAll('input[name="taste"]:checked')].map((cb) => cb.value);
+}
+
+// 按当前勾选，实时刷新弹窗里的「下次试试」
+function updateTastePreview() {
+  const keys = checkedTasteKeys();
+  const box = el("#taste-advice-preview");
+  if (!keys.length) { box.innerHTML = ""; return; }
+
+  const withAdvice = TASTE_ISSUES.filter((t) => keys.includes(t.key) && t.advice);
+  const missing = TASTE_ISSUES.filter((t) => keys.includes(t.key) && !t.advice);
+
+  let html = `<div class="ba-title">💡 下次试试</div>`;
+  html += withAdvice.map((t) => `<div class="ba-line"><b>${esc(t.label)}</b> → ${esc(t.advice)}</div>`).join("");
+  if (missing.length) {
+    html += `<div class="ba-line ba-empty">（${missing.map((t) => esc(t.label)).join("、")} 还没填建议——去 app.js 的 TASTE_ISSUES 补上 advice）</div>`;
+  }
+  box.innerHTML = html;
+}
+
+// 按一条已有冲煮的参数，开一个"新"记录（复现配方）
+function reproduceBrew(brewId) {
+  const src = state.brews.find((b) => b.id === brewId);
+  if (!src) return;
+  editingBrewId = null; // 是"新增"，不是编辑那条
+  const form = el("#brew-form");
+  form.reset();
+  el("#brew-dialog-title").textContent = "照配方再冲一杯";
+
+  // 带入配方参数，但不带评分 / 笔记 / 味道（那是这次要重新填的）
+  for (const key of ["beanId", "doseGrams", "waterGrams", "waterTemp", "grind", "bloomWater", "bloomTime", "totalTime", "gear"]) {
+    if (form.elements[key]) form.elements[key].value = src[key] ?? "";
+  }
+  el("#brew-date").value = todayISO();
+  form.querySelectorAll('input[name="taste"]').forEach((cb) => (cb.checked = false));
+
+  updateRatingOutput();
+  updateBrewPreview();
+  updateTastePreview();
+  el("#brew-dialog").showModal();
 }
 
 /* ----- 导入文件 ----- */
