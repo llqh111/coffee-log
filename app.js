@@ -43,7 +43,11 @@ const store = {
   },
   // 导出成一个 .json 文件下载下来（备份用）
   exportJSON() {
-    const text = JSON.stringify(state, null, 2);
+    const text = JSON.stringify(
+      { version: 1, beans: state.beans, brews: state.brews, tombstones: state.tombstones },
+      null,
+      2
+    );
     const blob = new Blob([text], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -60,7 +64,19 @@ const store = {
     if (!data || !Array.isArray(data.beans) || !Array.isArray(data.brews)) {
       throw new Error("文件格式不对：缺少 beans 或 brews 列表");
     }
-    state = { version: 1, beans: data.beans, brews: data.brews };
+    state = {
+      version: 1,
+      beans: data.beans,
+      brews: data.brews,
+      // 墓碑：旧备份可能没有，缺省给空对象，保证后续删除不会因 undefined 报错
+      tombstones: {
+        beans: (data.tombstones && data.tombstones.beans) || {},
+        brews: (data.tombstones && data.tombstones.brews) || {},
+      },
+    };
+    // 老备份没有 updatedAt，用 createdAt 兜底（再不行用 0），与 load 保持一致
+    for (const b of state.beans) if (b.updatedAt == null) b.updatedAt = b.createdAt || 0;
+    for (const r of state.brews) if (r.updatedAt == null) r.updatedAt = r.createdAt || 0;
     store.save();
   },
 };
