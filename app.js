@@ -915,9 +915,11 @@ function deleteBean(id) {
     ? '确定删除「' + (bean ? bean.name : '') + '」？它名下的 ' + count + ' 条冲煮也会一起删除。'
     : '确定删除「' + (bean ? bean.name : '') + '」？此操作无法恢复。';
 
-  // 找到对应的卡片作为确认条的插入锚点
-  const card = document.querySelector('.bean-card[data-bean="' + id + '"]');
-  confirmInline(card || el("#beans-grid"), msg, function () {
+  // 找到合适的确认条锚点：优先当前页面的卡片或详情头
+  var anchor = document.querySelector('.bean-card[data-bean="' + id + '"]');
+  if (!anchor) anchor = document.querySelector("#bean-detail-content .detail-head");
+  if (!anchor) anchor = document.querySelector("#beans-grid");
+  confirmInline(anchor, msg, function () {
     const now = Date.now();
     state.tombstones.beans[id] = now;
     state.beans = state.beans.filter((b) => b.id !== id);
