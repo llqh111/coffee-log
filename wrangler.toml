@@ -1,0 +1,8 @@
+name = "coffee-log"
+pages_build_output_dir = "."
+compatibility_date = "2026-06-05"
+
+# 部署前把 id 换成你创建的 KV 命名空间 id（见部署文档 Task 7）
+[[kv_namespaces]]
+binding = "SYNC_KV"
+id = "在这里填你的_KV_id"
