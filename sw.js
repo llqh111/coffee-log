@@ -1,10 +1,12 @@
 /* Service Worker：把程序文件缓存下来，实现"装到手机后断网也能用"。
    改了网页文件后，把下面的版本号 +1，用户下次联网打开就会自动更新。 */
-const CACHE = "shouchong-v1";
+const CACHE = "shouchong-v2";
 const ASSETS = [
   "./",
   "index.html",
   "style.css",
+  "merge.js",
+  "sync.js",
   "app.js",
   "manifest.webmanifest",
   "icon.svg",
