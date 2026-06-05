@@ -75,6 +75,11 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return json({ error: "请求体不是合法 JSON" }, 400);
   }
+  // 结构校验：beans / brews 必须是数组，否则拒绝，防止畸形数据污染云端存储
+  if (!incoming || typeof incoming !== "object" ||
+      !Array.isArray(incoming.beans) || !Array.isArray(incoming.brews)) {
+    return json({ error: "数据格式不对：beans / brews 必须是数组" }, 400);
+  }
   const key = await keyFor(code);
   const existingRaw = await env.SYNC_KV.get(key);
   const existing = existingRaw ? JSON.parse(existingRaw) : EMPTY;
