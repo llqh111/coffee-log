@@ -867,3 +867,194 @@ body {
   .detail-head { padding: 18px 14px; }
   .dialog-actions .btn { font-size: 14px; padding: 10px; }
 }
+
+/* ====== 全屏冲煮计时器 ====== */
+.brew-timer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--surface);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+.brew-timer-overlay.is-active {
+  display: flex;
+}
+
+/* 顶部栏 */
+.timer-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  gap: 12px;
+}
+.timer-exit {
+  background: none;
+  border: none;
+  font-size: 15px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 8px 0;
+  flex-shrink: 0;
+}
+.timer-exit:active { opacity: 0.6; }
+.timer-bean-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timer-spacer { width: 50px; flex-shrink: 0; }
+
+/* 中部：超大数字 */
+.timer-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.timer-big-num {
+  font-size: clamp(64px, 15vw, 96px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+  line-height: 1;
+  font-family: 'Spline Sans Mono', 'Courier New', monospace;
+}
+.timer-stage-hint {
+  font-size: 16px;
+  color: var(--ink-soft);
+  transition: color 0.2s;
+}
+
+/* 分段列表 */
+.timer-stage-list {
+  width: 100%;
+  max-width: 360px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+.timer-stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-raised);
+  transition: background 0.3s, opacity 0.3s;
+}
+.timer-stage.done {
+  opacity: 0.6;
+}
+.timer-stage.current {
+  background: var(--accent-light, #f0e6d3);
+  opacity: 1;
+}
+.ts-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.timer-stage.done .ts-num { background: var(--ink-soft); }
+.ts-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+.ts-time {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Spline Sans Mono', 'Courier New', monospace;
+}
+
+/* 底部按钮 */
+.timer-actions {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+.timer-main-btn,
+.timer-stop-btn {
+  flex: 1;
+  padding: 18px 0;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.15s;
+}
+.timer-main-btn {
+  flex: 2;
+  background: var(--accent);
+  color: #fff;
+}
+.timer-stop-btn {
+  background: var(--surface-raised);
+  color: var(--ink-soft);
+  border: 1.5px solid var(--border);
+}
+.timer-main-btn:active,
+.timer-stop-btn:active {
+  transform: scale(0.97);
+}
+
+/* 「记录一杯」弹窗里的启动按钮 */
+.brew-timer-launch {
+  margin: 8px 0 16px;
+  text-align: center;
+}
+.btn-timer {
+  width: 100%;
+  padding: 14px 0;
+  font-size: 17px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.btn-timer:active { transform: scale(0.98); }
+.timer-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* 表单格子闪烁（计时器回填时高亮提示） */
+.field input.timer-filled {
+  animation: timer-flash 0.6s ease;
+}
+@keyframes timer-flash {
+  0%, 100% { background: transparent; }
+  50% { background: var(--accent-light, #f0e6d3); }
+}
