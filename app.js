@@ -33,6 +33,8 @@ const store = {
       // 老数据没有 updatedAt，用 createdAt 兜底（再不行用 0）
       for (const b of state.beans) if (b.updatedAt == null) b.updatedAt = b.createdAt || 0;
       for (const r of state.brews) if (r.updatedAt == null) r.updatedAt = r.createdAt || 0;
+      // 老数据没有 stages 字段，兜底空数组
+      for (const r of state.brews) if (!r.stages) r.stages = [];
     } catch (e) {
       console.warn("读取本地数据失败，已使用空数据：", e);
     }
@@ -181,10 +183,7 @@ function updateTabIndicator(tab) {
   if (!tabsBar) return;
   var left = tab.offsetLeft;
   var width = tab.offsetWidth;
-  tabsBar.style.setProperty("--indicator-left", left + "px");
-  tabsBar.style.setProperty("--indicator-width", width + "px");
-  // 用 JS 直接设伪元素没法做到，改用 style 动态注入
-  // 伪元素用不了 JS 直接改，用 CSS 自定义属性
+  // 下划线用 CSS 伪元素绘制，JS 改不了伪元素，只能通过自定义属性间接传位置（见 style.css 的 --il / --iw）
   tabsBar.style.setProperty("--il", left + "px");
   tabsBar.style.setProperty("--iw", width + "px");
 }
@@ -338,7 +337,8 @@ function beanCardHTML(bean) {
   if (totalGrams > 0) {
     const usedGrams = brewsOfBean(bean.id).reduce(function (s, b) { return s + (parseFloat(b.doseGrams) || 0); }, 0);
     const pct = Math.min(100, Math.round((usedGrams / totalGrams) * 100));
-    const leftGrams = Math.max(0, totalGrams - usedGrams);
+    // 四舍五入到整数克，避免出现「剩约 153.5g」这种带小数的别扭数字
+    const leftGrams = Math.round(Math.max(0, totalGrams - usedGrams));
     usageHTML =
       '<div class="bean-usage">' +
       '<div class="usage-bar"><div class="usage-fill" style="width:' + pct + '%"></div></div>' +
@@ -408,6 +408,11 @@ function brewCardHTML(brew, showBean) {
     brew.totalTime ? `<span>总时间 <b>${esc(brew.totalTime)}</b></span>` : "",
     rest != null ? `<span>养豆 <b>${rest}天</b></span>` : "",
     brew.gear ? `<span>器具 <b>${esc(brew.gear)}</b></span>` : "",
+    (brew.stages && brew.stages.length > 0) ? '<span class="brew-rhythm">节奏 <b>' +
+      brew.stages.map(function (s, i) {
+        var prev = i === 0 ? 0 : brew.stages[i - 1].sec;
+        return s.label + " " + formatTime(s.sec - prev);
+      }).join(" · ") + '</b></span>' : "",
   ].filter(Boolean).join("");
 
   return `
@@ -783,6 +788,9 @@ function compareGroupHTML(title, rows) {
 let editingBeanId = null;
 let editingBrewId = null;
 
+// 计时器回传的暂存数据（保存前临时持有 stages + 总时间）
+var timerResultData = null;
+
 // 表单脏标记：有未保存修改时设为 true，防止误关丢失数据
 let beanFormDirty = false;
 let brewFormDirty = false;
@@ -897,6 +905,36 @@ function initEvents() {
   });
   el("#btn-import").addEventListener("click", () => el("#file-import").click());
   el("#file-import").addEventListener("change", onImportFile);
+
+  // 「开始冲煮计时」按钮（仅新增冲煮时可见）
+  var startTimerBtn = el("#btn-start-timer");
+  if (startTimerBtn) {
+    startTimerBtn.addEventListener("click", function () {
+      // 保存表单中已填的参数（豆子/粉水/研磨/水温），计时后恢复
+      var f = el("#brew-form").elements;
+      var prefill = {
+        beanId: f.beanId.value,
+        brewDate: f.brewDate.value,
+        doseGrams: f.doseGrams.value,
+        waterGrams: f.waterGrams.value,
+        waterTemp: f.waterTemp.value,
+        grind: f.grind.value,
+        bloomWater: f.bloomWater.value,
+        gear: f.gear.value,
+      };
+      // 隐藏弹窗
+      var dlg = el("#brew-dialog");
+      dlg.close();
+      // 启动全屏计时器
+      var bean = findBean(prefill.beanId);
+      BrewTimer.start({
+        beanName: bean ? bean.name : "未选豆子",
+        onFinish: function (result) {
+          onTimerFinish(result, prefill);
+        }
+      });
+    });
+  }
 }
 
 // ----- 冲煮列表点击 -----
@@ -960,6 +998,12 @@ function onSaveBean(e) {
     price: f.price.value,
   };
   if (!data.name) return; // required 已经拦住，这里再保险一次
+
+  // 拒绝负数：克数、价格不应为负（与冲煮表单的校验保持一致）
+  for (const { key, label } of [{ key: "weightGrams", label: "购买克数" }, { key: "price", label: "价格" }]) {
+    const v = parseFloat(data[key]);
+    if (!isNaN(v) && v < 0) { showToast(label + "不能是负数，请修改后再保存", "error"); return; }
+  }
 
   if (editingBeanId) {
     const bean = findBean(editingBeanId);
@@ -1037,6 +1081,10 @@ function openBrewDialog(id) {
   updateRatingOutput();
   updateBrewPreview();
   updateTastePreview();
+  // 「开始冲煮计时」按钮：仅新增时显示，编辑时隐藏
+  if (!id) timerResultData = null;
+  var launch = el("#brew-timer-launch");
+  if (launch) launch.style.display = id ? "none" : "";
   animateDialogOpen(el("#brew-dialog"));
 }
 
@@ -1062,6 +1110,7 @@ function onSaveBrew(e) {
     rating: parseFloat(f.rating.value) || 0,
     notes: f.notes.value.trim(),
     tasteIssues: checkedTasteKeys(),
+    stages: timerResultData || [],
   };
   if (!data.beanId) { alert("请选择这杯用的豆子"); return; }
 
@@ -1091,6 +1140,7 @@ function onSaveBrew(e) {
   renderAll();
   clearDirty("brew");
   flashButton(el("#brew-form").querySelector('button[type="submit"]'));
+  timerResultData = null;
   showToast("冲煮记录已保存 ☕", "success");
   animateDialogClose(el("#brew-dialog"));
 
@@ -1164,6 +1214,53 @@ function updateTastePreview() {
     html += `<div class="ba-line ba-empty">（${missing.map((t) => esc(t.label)).join("、")} 还没填建议——去 app.js 的 TASTE_ISSUES 补上 advice）</div>`;
   }
   box.innerHTML = html;
+}
+
+// 计时器停止后的回调：恢复弹窗、填回时间、暂存 stages
+function onTimerFinish(result, prefill) {
+  var dlg = el("#brew-dialog");
+  var form = el("#brew-form");
+
+  if (result.aborted) {
+    // 用户中途退出，恢复弹窗（不填数据）
+    animateDialogOpen(dlg);
+    timerResultData = null;
+    return;
+  }
+
+  // 恢复之前填的表单参数
+  if (prefill) {
+    for (var key in prefill) {
+      if (form.elements[key]) form.elements[key].value = prefill[key] || "";
+    }
+  }
+
+  // 总时间：秒 → "分:秒" 字符串，填进 totalTime 字段
+  var totalField = form.elements["totalTime"];
+  if (totalField && result.totalSec > 0) {
+    totalField.value = formatTime(result.totalSec);
+    totalField.classList.add("timer-filled");
+    setTimeout(function () { totalField.classList.remove("timer-filled"); }, 800);
+  }
+
+  // 闷蒸时间：秒数，填进 bloomTime 字段
+  var bloomField = form.elements["bloomTime"];
+  if (bloomField && result.bloomSec != null) {
+    bloomField.value = result.bloomSec;
+    bloomField.classList.add("timer-filled");
+    setTimeout(function () { bloomField.classList.remove("timer-filled"); }, 800);
+  }
+
+  // 暂存 stages（保存时写入）
+  timerResultData = result.stages || [];
+
+  // 刷新实时预览
+  updateBrewPreview();
+  updateTastePreview();
+
+  // 重新打开弹窗
+  animateDialogOpen(dlg);
+  showToast("时间已自动填入 ✨", "success");
 }
 
 // 按一条已有冲煮的参数，开一个"新"记录（复现配方）
