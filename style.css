@@ -715,40 +715,57 @@ body {
   .content { padding: 24px 14px 48px; }
   .site-footer { padding: 20px 14px 36px; font-size: 10px; letter-spacing: .04em; }
 
-  /* ---- 顶部：堆叠布局 ---- */
+  /* ---- 顶部：堆叠布局，每块独立不重叠 ---- */
   .site-header {
-    flex-direction: column; align-items: stretch; gap: 14px;
-    padding: 20px 14px 8px;
+    flex-direction: column; align-items: stretch; gap: 10px;
+    padding: 16px 14px 10px; flex-wrap: nowrap; /* 禁止换行重叠 */
   }
-  .brand { gap: 10px; }
-  .brand-mark { width: 42px; height: 42px; font-size: 22px; }
-  .brand-text h1 { font-size: 24px; }
-  .tagline { font-size: 12px; margin-top: 2px; }
+  /* 品牌区 */
+  .brand { gap: 10px; align-items: center; overflow: hidden; }
+  .brand-mark { width: 40px; height: 40px; font-size: 20px; flex: none; }
+  .brand-text { min-width: 0; overflow: hidden; }
+  .brand-text h1 { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tagline { font-size: 11px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* 工具栏：导出导入按钮变小 */
+  /* 工具栏：独立一行，按钮不换行 */
   .toolbar {
-    width: 100%; justify-content: space-between; gap: 6px; flex-wrap: wrap;
+    width: 100%; display: flex; align-items: center; gap: 6px;
+    flex-wrap: nowrap; /* 防止按钮换行重叠 */
   }
   .toolbar .btn {
-    font-size: 12px; padding: 7px 13px;
+    font-size: 11px; padding: 6px 11px; white-space: nowrap;
+    flex-shrink: 0; /* 按钮不压缩 */
   }
 
-  /* 同步指示器：整行可点 */
+  /* 同步指示器：放在工具栏最左侧，紧凑不溢出 */
   .sync-indicator {
-    order: -1; width: 100%; justify-content: center;
-    padding: 8px 14px; margin-bottom: 4px;
-    border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+    order: -1; flex-shrink: 1; min-width: 0;
+    padding: 5px 8px; margin: 0;
+    font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border: 1px solid var(--hairline); border-radius: 999px;
     background: var(--paper);
+    max-width: 120px; /* 限制宽度，给按钮让位 */
   }
-  .sync-dropdown { left: 0; right: 0; min-width: auto; }
+  .sync-indicator .sync-dot { width: 6px; height: 6px; }
+  .sync-dropdown {
+    left: 0; right: auto; min-width: 220px; max-width: 90vw;
+    top: calc(100% + 8px);
+  }
 
-  /* ---- 标签页：均分宽度 ---- */
+  /* ---- 标签页：均分宽度，防溢出 ---- */
   .tabs {
-    padding: 0 10px; gap: 0; margin-top: 12px;
-    justify-content: space-around;
+    padding: 0 4px; gap: 0; margin-top: 12px;
+    justify-content: space-around; overflow: hidden;
   }
-  .tab { padding: 10px 6px; font-size: 15px; flex: 1; justify-content: center; }
-  .tab .tab-count { font-size: 10px; padding: 1px 6px; }
+  .tab { padding: 10px 4px; font-size: 14px; flex: 1; justify-content: center; min-width: 0; }
+  .tab .tab-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tab .tab-count { font-size: 10px; padding: 1px 5px; flex-shrink: 0; }
+
+  /* 全局防溢出 */
+  .content, .beans-grid, .brews-list { overflow: hidden; }
+  .bean-card, .brew-card { overflow: hidden; }
+  .chips { overflow: hidden; flex-wrap: wrap; }
+  .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ---- 豆子卡片 ---- */
   .beans-grid { grid-template-columns: 1fr; gap: 14px; }
