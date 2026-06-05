@@ -11,10 +11,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
+  <!-- 浏览器标签页图标（顺带消除浏览器自动请求 /favicon.ico 的 404） -->
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+
   <!-- 手机 App 化（PWA）：可"添加到主屏幕"、可离线使用 -->
   <meta name="theme-color" content="#2a1c12" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon.svg" />
+  <!-- 标准写法（新版浏览器）+ 苹果旧写法（老 iOS Safari），两者并存兼容最广 -->
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="手冲手记" />
@@ -288,6 +293,12 @@
         <div class="taste-advice" id="taste-advice-preview"><!-- JS 实时填充建议 --></div>
       </fieldset>
 
+      <!-- 冲煮计时器启动入口（仅新增时显示，JS 控制显隐） -->
+      <div class="brew-timer-launch" id="brew-timer-launch" style="display:none">
+        <button id="btn-start-timer" class="btn btn-timer" type="button">▶ 开始冲煮计时</button>
+        <p class="timer-hint">先填好粉量、水量、研磨、水温，再点这里进全屏计时</p>
+      </div>
+
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" data-close>取消</button>
         <button type="submit" class="btn btn-solid">保存</button>
@@ -295,8 +306,27 @@
     </form>
   </dialog>
 
+  <!-- ============ 全屏冲煮计时器 ============ -->
+  <div class="brew-timer-overlay" id="brew-timer-overlay" aria-hidden="true">
+    <div class="timer-top">
+      <button id="timer-exit" class="timer-exit" type="button">← 退出</button>
+      <span id="timer-bean-label" class="timer-bean-name"></span>
+      <span class="timer-spacer"></span>
+    </div>
+    <div class="timer-center">
+      <div class="timer-big-num" id="timer-display">0:00</div>
+      <div class="timer-stage-hint" id="timer-stage-label">准备好就点开始</div>
+    </div>
+    <div class="timer-stage-list" id="timer-stage-list"></div>
+    <div class="timer-actions">
+      <button id="timer-main-btn" class="timer-main-btn">▶ 开始</button>
+      <button id="timer-stop-btn" class="timer-stop-btn">停止</button>
+    </div>
+  </div>
+
   <script src="merge.js?v=5"></script>
   <script src="sync.js?v=5"></script>
+  <script src="timer.js?v=5"></script>
   <script src="app.js?v=5"></script>
 
   <!-- 注册 Service Worker：让程序能离线打开（仅在网址 http/https 下生效，本地双击会自动跳过） -->
