@@ -34,19 +34,27 @@
       </div>
     </div>
     <div class="toolbar">
+      <!-- 云同步指示器 -->
+      <div class="sync-indicator" id="sync-indicator" title="云同步状态">
+        <span class="sync-dot" aria-hidden="true"></span>
+        <span id="sync-label">未启用</span>
+        <div class="sync-dropdown" id="sync-dropdown">
+          <label for="sync-code-input">同步码（多设备设成一样的）</label>
+          <input id="sync-code-input" type="text" placeholder="自设一串不易猜的码" autocomplete="off" />
+          <div class="sync-actions">
+            <button id="btn-sync-save" type="button">保存并同步</button>
+            <button id="btn-sync-disconnect" type="button">断开</button>
+          </div>
+        </div>
+      </div>
       <button id="btn-export" class="btn btn-ghost" type="button" title="把所有数据存成一个备份文件">导出备份</button>
       <button id="btn-import" class="btn btn-ghost" type="button" title="从备份文件恢复数据">导入</button>
       <input id="file-import" type="file" accept="application/json,.json" hidden />
     </div>
   </header>
 
-  <div id="sync-panel" class="sync-panel">
-    <label>云同步码
-      <input id="sync-code" type="text" placeholder="自设一串不易猜的码" autocomplete="off" />
-    </label>
-    <button id="btn-sync-save" type="button">保存并同步</button>
-    <span id="sync-status" class="sync-status">未启用</span>
-  </div>
+  <!-- Toast 通知容器 -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <!-- 标签页切换 -->
   <nav class="tabs" id="tabs">
@@ -121,7 +129,7 @@
   </main>
 
   <footer class="site-footer">
-    <span>数据只存在你这台电脑的浏览器里 · 记得偶尔「导出备份」</span>
+    <span>数据存于本地浏览器，可设同步码多设备共享 · 建议偶尔「导出备份」</span>
   </footer>
 
   <!-- ============ 弹窗：新增/编辑 咖啡豆 ============ -->

@@ -81,6 +81,113 @@ const store = {
   },
 };
 
+/* ========== 1.3) ui：交互工具（toast / 确认 / 动画） ========== */
+
+// Toast 通知：从右上角滑入，3s 后自动消失
+function showToast(message, type) {
+  type = type || "";
+  var container = document.getElementById("toast-container");
+  var toast = document.createElement("div");
+  toast.className = "toast " + type;
+  toast.textContent = message;
+  container.appendChild(toast);
+  // 点击提前关闭
+  toast.addEventListener("click", function () { removeToast(toast); });
+  var timer = setTimeout(function () { removeToast(toast); }, 3200);
+  toast._timer = timer;
+}
+function removeToast(toast) {
+  if (toast._removed) return;
+  toast._removed = true;
+  clearTimeout(toast._timer);
+  toast.classList.add("out");
+  setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 320);
+}
+
+// 内联确认条：在 target 元素后面插入确认栏，替换原生 confirm()
+// onYes 回调里做实际删除；target 通常是被点的那行卡片
+function confirmInline(target, message, onYes) {
+  // 移除已有的确认条
+  var existing = document.querySelector(".confirm-bar");
+  if (existing) existing.remove();
+
+  var bar = document.createElement("div");
+  bar.className = "confirm-bar";
+  bar.innerHTML =
+    '<span class="confirm-text">' + esc(message) + '</span>' +
+    '<button class="confirm-yes">确定删除</button>' +
+    '<button class="confirm-no">取消</button>';
+
+  // 找到合适的插入位置
+  var card = target.closest(".brew-card") || target.closest(".bean-card") || target.closest(".detail-head");
+  if (card) {
+    card.after(bar);
+    bar.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } else {
+    target.parentNode.insertBefore(bar, target.nextSibling);
+  }
+
+  bar.querySelector(".confirm-no").addEventListener("click", function () { bar.remove(); });
+  bar.querySelector(".confirm-yes").addEventListener("click", function () {
+    bar.remove();
+    if (card) { card.classList.add("card-removing"); }
+    // 等退出动画播完再执行删除
+    setTimeout(function () { if (onYes) onYes(); }, 260);
+  });
+}
+
+// 交错入场动画：给容器里的卡片加 stagger-in 类
+function staggerCards(container, selector) {
+  var cards = container.querySelectorAll(selector);
+  cards.forEach(function (c, i) {
+    c.classList.add("stagger-in");
+    c.style.animationDelay = Math.min(i * 50, 300) + "ms";
+  });
+}
+
+// 弹窗动画：打开前重置 transform
+function animateDialogOpen(dialog) {
+  dialog.classList.remove("closing");
+  dialog.showModal();
+}
+// 弹窗关闭动画：先加 closing 类，动画播完再 close
+function animateDialogClose(dialog, callback) {
+  dialog.classList.add("closing");
+  setTimeout(function () {
+    dialog.close();
+    dialog.classList.remove("closing");
+    if (callback) callback();
+  }, 180);
+}
+
+// 元素脉冲动画
+function pulseElement(el) {
+  el.classList.remove("pulse");
+  void el.offsetWidth; // 强制回流，让浏览器重启动画
+  el.classList.add("pulse");
+  setTimeout(function () { el.classList.remove("pulse"); }, 400);
+}
+
+// 保存按钮闪烁
+function flashButton(btn) {
+  btn.classList.add("btn-saved");
+  setTimeout(function () { btn.classList.remove("btn-saved"); }, 1300);
+}
+
+// 更新标签页滑动下划线位置
+function updateTabIndicator(tab) {
+  var tabsBar = document.getElementById("tabs");
+  if (!tabsBar) return;
+  var left = tab.offsetLeft;
+  var width = tab.offsetWidth;
+  tabsBar.style.setProperty("--indicator-left", left + "px");
+  tabsBar.style.setProperty("--indicator-width", width + "px");
+  // 用 JS 直接设伪元素没法做到，改用 style 动态注入
+  // 伪元素用不了 JS 直接改，用 CSS 自定义属性
+  tabsBar.style.setProperty("--il", left + "px");
+  tabsBar.style.setProperty("--iw", width + "px");
+}
+
 /* ========== 2) helpers：计算工具 ========== */
 
 // 生成唯一 id（时间戳 + 随机，足够个人使用）
@@ -212,6 +319,8 @@ function renderBeans() {
   // 新加的排前面
   const beans = [...state.beans].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   grid.innerHTML = beans.map(beanCardHTML).join("");
+  // 交错入场
+  staggerCards(grid, ".bean-card");
 }
 
 function beanCardHTML(bean) {
@@ -221,11 +330,27 @@ function beanCardHTML(bean) {
     .filter(Boolean)
     .map((t) => `<span class="chip">${esc(t)}</span>`)
     .join("");
+
+  // 用量进度：有购买克数时，按总用粉量估算
+  let usageHTML = "";
+  const totalGrams = parseFloat(bean.weightGrams);
+  if (totalGrams > 0) {
+    const usedGrams = brewsOfBean(bean.id).reduce(function (s, b) { return s + (parseFloat(b.doseGrams) || 0); }, 0);
+    const pct = Math.min(100, Math.round((usedGrams / totalGrams) * 100));
+    const leftGrams = Math.max(0, totalGrams - usedGrams);
+    usageHTML =
+      '<div class="bean-usage">' +
+      '<div class="usage-bar"><div class="usage-fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="usage-text">已用 ' + pct + '% · 剩约 ' + leftGrams + 'g</div>' +
+      '</div>';
+  }
+
   return `
     <article class="bean-card" data-bean="${bean.id}">
       <h3 class="bean-name">${esc(bean.name)}</h3>
       <div class="bean-roaster">${esc(bean.roaster || "未填烘焙商")}</div>
       <div class="chips">${chips || '<span class="chip">未填产地信息</span>'}</div>
+      ${usageHTML}
       <div class="bean-stats">
         <div class="stat">
           <div class="stat-num accent">${rest == null ? "—" : rest}</div>
@@ -262,6 +387,8 @@ function renderBrews() {
     return;
   }
   list.innerHTML = brews.map((b) => brewCardHTML(b, true)).join("");
+  // 交错入场
+  staggerCards(list, ".brew-card");
 }
 
 // showBean=true 时显示属于哪包豆（单豆详情里就不用重复显示了）
@@ -440,9 +567,17 @@ function showView(name) {
   // 顶部标签高亮（详情页 name=bean-detail 时三个标签都不亮，符合预期）
   document.querySelectorAll(".tab").forEach((t) => {
     t.classList.toggle("is-active", t.dataset.view === name);
+    if (t.dataset.view === name && t.dataset.view !== "bean-detail") {
+      updateTabIndicator(t);
+    }
   });
   if (name === "analysis") renderAnalysis(); // 进分析页时现算
   window.scrollTo({ top: 0, behavior: "smooth" });
+  // 切换后给当前视图的卡片加交错动画
+  var activeView = el("#view-" + name);
+  if (activeView) {
+    staggerCards(activeView, ".bean-card, .brew-card");
+  }
 }
 
 // 把豆子填进下拉框（筛选框 + 新增冲煮的选豆框）
@@ -667,9 +802,12 @@ function initEvents() {
   el("#btn-add-bean").addEventListener("click", () => openBeanDialog(null));
   el("#btn-add-brew").addEventListener("click", () => openBrewDialog(null));
 
-  // 弹窗里的「取消」
+  // 弹窗里的「取消」——动画关闭
   document.querySelectorAll("[data-close]").forEach((btn) =>
-    btn.addEventListener("click", (e) => e.target.closest("dialog").close())
+    btn.addEventListener("click", function (e) {
+      var dlg = e.target.closest("dialog");
+      if (dlg) animateDialogClose(dlg);
+    })
   );
 
   // 表单提交
@@ -688,7 +826,10 @@ function initEvents() {
   el("#taste-options").addEventListener("change", updateTastePreview);
 
   // 导出 / 导入
-  el("#btn-export").addEventListener("click", () => store.exportJSON());
+  el("#btn-export").addEventListener("click", function () {
+    store.exportJSON();
+    showToast("备份已保存 ☕", "success");
+  });
   el("#btn-import").addEventListener("click", () => el("#file-import").click());
   el("#file-import").addEventListener("change", onImportFile);
 }
@@ -733,7 +874,7 @@ function openBeanDialog(id) {
       }
     }
   }
-  el("#bean-dialog").showModal();
+  animateDialogOpen(el("#bean-dialog"));
 }
 
 function onSaveBean(e) {
@@ -762,28 +903,34 @@ function onSaveBean(e) {
   store.save();
   if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
-  el("#bean-dialog").close();
+  flashButton(el("#bean-form").querySelector('button[type="submit"]'));
+  showToast("豆子已保存 ☕", "success");
+  animateDialogClose(el("#bean-dialog"));
 }
 
 function deleteBean(id) {
   const bean = findBean(id);
   const count = brewsOfBean(id).length;
   const msg = count > 0
-    ? `确定删除「${bean?.name}」吗？\n它名下的 ${count} 条冲煮记录也会一起删除，且无法恢复。`
-    : `确定删除「${bean?.name}」吗？此操作无法恢复。`;
-  if (!confirm(msg)) return;
-  // 软删除：从内存里移除，但留墓碑，防止以后云同步把删掉的又拉回来
-  const now = Date.now();
-  state.tombstones.beans[id] = now;
-  state.beans = state.beans.filter((b) => b.id !== id);
-  for (const r of state.brews) {
-    if (r.beanId === id) state.tombstones.brews[r.id] = now; // 连带删除的冲煮也立墓碑
-  }
-  state.brews = state.brews.filter((b) => b.beanId !== id); // 连带删除其冲煮
-  store.save();
-  if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
-  renderAll();
-  showView("beans");
+    ? '确定删除「' + (bean ? bean.name : '') + '」？它名下的 ' + count + ' 条冲煮也会一起删除。'
+    : '确定删除「' + (bean ? bean.name : '') + '」？此操作无法恢复。';
+
+  // 找到对应的卡片作为确认条的插入锚点
+  const card = document.querySelector('.bean-card[data-bean="' + id + '"]');
+  confirmInline(card || el("#beans-grid"), msg, function () {
+    const now = Date.now();
+    state.tombstones.beans[id] = now;
+    state.beans = state.beans.filter((b) => b.id !== id);
+    for (var i = 0; i < state.brews.length; i++) {
+      if (state.brews[i].beanId === id) state.tombstones.brews[state.brews[i].id] = now;
+    }
+    state.brews = state.brews.filter((b) => b.beanId !== id);
+    store.save();
+    if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
+    renderAll();
+    showView("beans");
+    showToast("豆子已删除", "warn");
+  });
 }
 
 /* ----- 冲煮：打开弹窗 / 保存 / 删除 ----- */
@@ -815,7 +962,7 @@ function openBrewDialog(id) {
   updateRatingOutput();
   updateBrewPreview();
   updateTastePreview();
-  el("#brew-dialog").showModal();
+  animateDialogOpen(el("#brew-dialog"));
 }
 
 function onSaveBrew(e) {
@@ -854,7 +1001,9 @@ function onSaveBrew(e) {
   store.save();
   if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
-  el("#brew-dialog").close();
+  flashButton(el("#brew-form").querySelector('button[type="submit"]'));
+  showToast("冲煮记录已保存 ☕", "success");
+  animateDialogClose(el("#brew-dialog"));
 
   // 如果当前正在看某包豆的详情，刷新它
   if (el("#view-bean-detail").classList.contains("is-active")) {
@@ -863,13 +1012,15 @@ function onSaveBrew(e) {
 }
 
 function deleteBrew(id) {
-  if (!confirm("确定删除这条冲煮记录吗？此操作无法恢复。")) return;
-  // 软删除：移除但立墓碑，给以后云同步用
-  state.tombstones.brews[id] = Date.now();
-  state.brews = state.brews.filter((b) => b.id !== id);
-  store.save();
-  if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
-  renderAll();
+  const card = document.querySelector('.brew-card[data-brew="' + id + '"]');
+  confirmInline(card || el("#brews-list"), "确定删除这条冲煮记录？此操作无法恢复。", function () {
+    state.tombstones.brews[id] = Date.now();
+    state.brews = state.brews.filter((b) => b.id !== id);
+    store.save();
+    if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
+    renderAll();
+    showToast("冲煮记录已删除", "warn");
+  });
 }
 
 /* ----- 冲煮弹窗的实时反馈 ----- */
@@ -877,16 +1028,19 @@ function updateBrewPreview() {
   const dose = el("#dose-input").value;
   const water = el("#water-input").value;
   el("#ratio-preview").textContent = ratioText(dose, water);
+  pulseElement(el("#ratio-preview"));
 
   const beanId = el("#brew-bean-select").value;
   const bean = findBean(beanId);
   const rest = restDays(bean?.roastDate, el("#brew-date").value || todayISO());
   el("#rest-preview").textContent = rest == null ? "—" : rest + " 天";
+  pulseElement(el("#rest-preview"));
 }
 
 function updateRatingOutput() {
   const v = parseFloat(el("#rating-input").value);
   el("#rating-output").textContent = v ? `${v} / 10` : "未评分";
+  if (v) pulseElement(el("#rating-output"));
 }
 
 /* ----- 味道复选框：渲染 / 实时建议 ----- */
@@ -941,59 +1095,107 @@ function reproduceBrew(brewId) {
   updateRatingOutput();
   updateBrewPreview();
   updateTastePreview();
-  el("#brew-dialog").showModal();
+  animateDialogOpen(el("#brew-dialog"));
 }
 
 /* ----- 导入文件 ----- */
 function onImportFile(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (!confirm("导入会用文件里的数据【覆盖】当前所有记录，确定继续吗？\n（建议先「导出备份」当前数据）")) {
-    e.target.value = "";
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      store.importJSON(reader.result);
-      renderAll();
-      showView("beans");
-      alert("导入成功 ✅");
-    } catch (err) {
-      alert("导入失败：" + err.message);
-    }
-    e.target.value = ""; // 清空，方便下次再选同一个文件
-  };
-  reader.readAsText(file);
+  // 用内联确认代替原生 confirm
+  confirmInline(el("#btn-import"), "导入会用文件数据【覆盖】当前所有记录，确定继续？（建议先导出备份）", function () {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        store.importJSON(reader.result);
+        renderAll();
+        showView("beans");
+        showToast("导入成功 ✅", "success");
+      } catch (err) {
+        showToast("导入失败：" + err.message, "error");
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  });
+  // confirmInline 是异步的，但这里需要重置 file input 以便能重选同一文件
+  // 在回调里已经重置了
 }
 
-/* ----- 云同步：初始化面板 + 自动同步时机 ----- */
+/* ----- 云同步：初始化下拉面板 + 自动同步 ----- */
 function initSync() {
-  const codeInput = document.getElementById("sync-code");
-  const statusEl = document.getElementById("sync-status");
-  const setStatus = (s) => { if (statusEl) statusEl.textContent = s.text; };
+  var indicator = document.getElementById("sync-indicator");
+  var label = document.getElementById("sync-label");
+  var dropdown = document.getElementById("sync-dropdown");
+  var codeInput = document.getElementById("sync-code-input");
+  var saveBtn = document.getElementById("btn-sync-save");
+  var disconnectBtn = document.getElementById("btn-sync-disconnect");
+
+  var lastStatus = { type: "", text: "" };
+
+  function updateUI(s) {
+    lastStatus = s;
+    if (label) label.textContent = s.text || "未启用";
+    if (indicator) {
+      indicator.classList.remove("enabled", "syncing", "error");
+      if (s.type === "ok") indicator.classList.add("enabled");
+      else if (s.type === "syncing") indicator.classList.add("syncing");
+      else if (s.type === "error" || s.type === "auth" || s.type === "offline") indicator.classList.add("error");
+    }
+  }
 
   SyncClient.init({
-    onStatus: setStatus,
+    onStatus: function (s) { updateUI(s); },
     getLocal: getStateForSync,
     setLocal: applyMergedState,
   });
 
   if (codeInput) codeInput.value = SyncClient.getCode();
-  setStatus(SyncClient.enabled() ? { text: "✅ 已启用" } : { text: "未启用" });
+  updateUI(SyncClient.enabled() ? { type: "ok", text: "已启用" } : { type: "", text: "未启用" });
 
-  const saveBtn = document.getElementById("btn-sync-save");
+  // 点击指示器 → 切换下拉菜单
+  if (indicator) {
+    indicator.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (dropdown) dropdown.classList.toggle("is-open");
+    });
+  }
+  // 点击页面其他地方关闭下拉
+  document.addEventListener("click", function () {
+    if (dropdown) dropdown.classList.remove("is-open");
+  });
+  if (dropdown) {
+    dropdown.addEventListener("click", function (e) { e.stopPropagation(); });
+  }
+
+  // 保存并同步
   if (saveBtn) {
-    saveBtn.addEventListener("click", () => {
-      SyncClient.setCode(codeInput.value);
-      if (SyncClient.enabled()) SyncClient.syncNow();
-      else setStatus({ text: "未启用" });
+    saveBtn.addEventListener("click", function () {
+      SyncClient.setCode(codeInput ? codeInput.value : "");
+      if (SyncClient.enabled()) {
+        SyncClient.syncNow();
+        showToast("同步码已保存，正在同步…", "success");
+      } else {
+        updateUI({ type: "", text: "未启用" });
+      }
+      if (dropdown) dropdown.classList.remove("is-open");
     });
   }
 
-  // 打开即跑一轮（拉取→合并→推送）
+  // 断开同步
+  if (disconnectBtn) {
+    disconnectBtn.addEventListener("click", function () {
+      SyncClient.setCode("");
+      if (codeInput) codeInput.value = "";
+      updateUI({ type: "", text: "未启用" });
+      if (dropdown) dropdown.classList.remove("is-open");
+      showToast("已断开云同步", "warn");
+    });
+  }
+
+  // 启动时自动同步一轮
   if (SyncClient.enabled()) {
-    window.addEventListener("load", () => SyncClient.syncNow());
+    window.addEventListener("load", function () { SyncClient.syncNow(); });
   }
 }
 
@@ -1002,3 +1204,8 @@ store.load();
 initEvents();
 renderAll();
 initSync();
+// 初始标签指示器位置
+(function () {
+  var activeTab = document.querySelector(".tab.is-active");
+  if (activeTab) updateTabIndicator(activeTab);
+})();
