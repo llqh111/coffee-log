@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="手冲手记" />
 
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
   <!-- 纸张噪点纹理层（纯装饰，盖在最底层） -->
@@ -139,7 +139,7 @@
   </main>
 
   <footer class="site-footer">
-    <span>数据存于本地浏览器，可设同步码多设备共享 · 建议偶尔「导出备份」</span>
+    <span id="footer-text">数据存于本地浏览器，可设同步码多设备共享 · 建议偶尔「导出备份」</span>
   </footer>
 
   <!-- ============ 弹窗：新增/编辑 咖啡豆 ============ -->
@@ -295,9 +295,9 @@
     </form>
   </dialog>
 
-  <script src="merge.js?v=3"></script>
-  <script src="sync.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="merge.js?v=5"></script>
+  <script src="sync.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 
   <!-- 注册 Service Worker：让程序能离线打开（仅在网址 http/https 下生效，本地双击会自动跳过） -->
   <script>

@@ -5,9 +5,13 @@
   // 同源部署时 API 与网页同域，用相对路径即可
   const API = "/api/data";
 
-  let onStatus = () => {};        // 状态回调：传入 {type, text}
-  let getLocal = () => null;      // 返回当前本地 state（含 tombstones）
-  let setLocal = () => {};        // 用合并结果覆盖本地并重渲染+存盘
+  let onStatus = function () {};        // 状态回调：传入 {type, text}
+  let getLocal = function () { return null; };      // 返回当前本地 state（含 tombstones）
+  let setLocal = function () {};        // 用合并结果覆盖本地并重渲染+存盘
+
+  // 去抖：pushOnly 500ms 内只推一次，避免连点保存/删除时刷屏
+  let pushTimer = null;
+  let pendingPush = null;
 
   function getCode() {
     return (localStorage.getItem(CODE_KEY) || "").trim();
@@ -20,14 +24,14 @@
   }
 
   async function pull() {
-    const res = await fetch(API, { headers: { "X-Sync-Code": getCode() } });
+    var res = await fetch(API, { headers: { "X-Sync-Code": getCode() } });
     if (res.status === 401) throw Object.assign(new Error("同步码错误"), { code: 401 });
     if (!res.ok) throw new Error("拉取失败 " + res.status);
     return res.json();
   }
 
   async function push(data) {
-    const res = await fetch(API, {
+    var res = await fetch(API, {
       method: "POST",
       headers: { "X-Sync-Code": getCode(), "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -41,44 +45,50 @@
   async function syncNow() {
     if (!enabled()) return;
     if (!navigator.onLine) {
-      onStatus({ type: "offline", text: "📴 离线，待同步" });
+      onStatus({ type: "offline", text: "📴 离线，联网后自动同步" });
       return;
     }
     try {
       onStatus({ type: "syncing", text: "🔄 同步中…" });
-      const remote = await pull();
-      const merged = SyncMerge.mergeState(getLocal(), remote);
+      var remote = await pull();
+      var merged = SyncMerge.mergeState(getLocal(), remote);
       setLocal(merged);
-      const finalData = await push(merged);
+      var finalData = await push(merged);
       setLocal(SyncMerge.mergeState(merged, finalData));
-      onStatus({ type: "ok", text: "✅ 已同步（刚刚）" });
+      onStatus({ type: "ok", text: "✅ 已同步" });
     } catch (e) {
-      if (e.code === 401) onStatus({ type: "auth", text: "⚠️ 同步码错误" });
-      else onStatus({ type: "offline", text: "📴 离线，待同步" });
+      if (e.code === 401) onStatus({ type: "auth", text: "⚠️ 同步码错误，点我重设" });
+      else onStatus({ type: "offline", text: "📴 同步失败，联网后重试" });
       console.warn("同步失败（本地数据安全）", e);
     }
   }
 
-  // 仅推送（存档后用）：失败不影响本地
+  // 去抖推送（存档后用）：500ms 内多次调用只推最后一次
   async function pushOnly() {
     if (!enabled() || !navigator.onLine) return;
-    try {
-      onStatus({ type: "syncing", text: "🔄 同步中…" });
-      const finalData = await push(getLocal());
-      setLocal(SyncMerge.mergeState(getLocal(), finalData));
-      onStatus({ type: "ok", text: "✅ 已同步（刚刚）" });
-    } catch (e) {
-      onStatus({ type: "offline", text: "📴 离线，待同步" });
-      console.warn("推送失败（本地数据安全）", e);
-    }
+    pendingPush = getLocal();
+    if (pushTimer) return; // 已有定时器在等，只更新 pending 数据
+    pushTimer = setTimeout(async function () {
+      pushTimer = null;
+      var data = pendingPush;
+      pendingPush = null;
+      try {
+        onStatus({ type: "syncing", text: "🔄 同步中…" });
+        var finalData = await push(data);
+        setLocal(SyncMerge.mergeState(data, finalData));
+        onStatus({ type: "ok", text: "✅ 已同步" });
+      } catch (e) {
+        onStatus({ type: "offline", text: "📴 推送暂缓，联网后自动同步" });
+        console.warn("推送失败（本地数据安全）", e);
+      }
+    }, 500);
   }
 
   function init(hooks) {
     onStatus = hooks.onStatus || onStatus;
     getLocal = hooks.getLocal || getLocal;
     setLocal = hooks.setLocal || setLocal;
-    window.addEventListener("online", syncNow);
   }
 
-  globalThis.SyncClient = { init, getCode, setCode, enabled, syncNow, pushOnly };
+  globalThis.SyncClient = { init: init, getCode: getCode, setCode: setCode, enabled: enabled, syncNow: syncNow, pushOnly: pushOnly };
 })();

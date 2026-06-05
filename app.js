@@ -362,6 +362,10 @@ function beanCardHTML(bean) {
           <div class="stat-label">冲煮次数</div>
         </div>
       </div>
+      <div class="row-actions">
+        <button class="btn-mini" data-edit-bean="${bean.id}">编辑</button>
+        <button class="btn-mini danger" data-del-bean="${bean.id}">删除</button>
+      </div>
     </article>`;
 }
 
@@ -681,8 +685,16 @@ function renderAnalysis() {
 
   // 一杯都没打分
   if (list.length === 0) {
-    box.innerHTML = emptyState("📊", "还没有可分析的数据",
-      "去「冲煮记录」给几杯打个分（1–10），这里就会帮你找规律");
+    const totalBrews = state.brews.length;
+    if (totalBrews === 0) {
+      // 还没有任何冲煮记录
+      box.innerHTML = emptyState("📊", "还没有可分析的数据",
+        "先去「冲煮记录」标签，点「+ 记录一杯」，冲完给这杯打个分（1–10），这里就会帮你找规律 ✨");
+    } else {
+      // 有冲煮记录但都没打分
+      box.innerHTML = emptyState("📊", "这 " + totalBrews + " 杯还没打分",
+        "去「冲煮记录」标签，点每条记录的「编辑」，拖动评分滑块打个分（1–10），再回来就能分析了 ✨");
+    }
     return;
   }
 
@@ -771,6 +783,19 @@ function compareGroupHTML(title, rows) {
 let editingBeanId = null;
 let editingBrewId = null;
 
+// 表单脏标记：有未保存修改时设为 true，防止误关丢失数据
+let beanFormDirty = false;
+let brewFormDirty = false;
+
+function markDirty(formId) {
+  if (formId === "bean") beanFormDirty = true;
+  if (formId === "brew") brewFormDirty = true;
+}
+function clearDirty(formId) {
+  if (formId === "bean") beanFormDirty = false;
+  if (formId === "brew") brewFormDirty = false;
+}
+
 function initEvents() {
   // 顶部标签切换
   el("#tabs").addEventListener("click", (e) => {
@@ -781,8 +806,12 @@ function initEvents() {
   // 返回豆柜
   el("#btn-back").addEventListener("click", () => showView("beans"));
 
-  // 点豆子卡片 -> 详情
+  // 豆子卡片：按钮（编辑/删除）优先，然后才是点卡片进详情
   el("#beans-grid").addEventListener("click", (e) => {
+    const editBtn = e.target.closest("[data-edit-bean]");
+    const delBtn = e.target.closest("[data-del-bean]");
+    if (editBtn) { e.stopPropagation(); openBeanDialog(editBtn.dataset.editBean); return; }
+    if (delBtn) { e.stopPropagation(); deleteBean(delBtn.dataset.delBean); return; }
     const card = e.target.closest(".bean-card");
     if (card) renderBeanDetail(card.dataset.bean);
   });
@@ -803,17 +832,52 @@ function initEvents() {
   el("#btn-add-bean").addEventListener("click", () => openBeanDialog(null));
   el("#btn-add-brew").addEventListener("click", () => openBrewDialog(null));
 
-  // 弹窗里的「取消」——动画关闭
+  // 弹窗里的「取消」——有未保存修改时先提示，不直接关
   document.querySelectorAll("[data-close]").forEach((btn) =>
     btn.addEventListener("click", function (e) {
       var dlg = e.target.closest("dialog");
-      if (dlg) animateDialogClose(dlg);
+      if (!dlg) return;
+      if (dlg.id === "bean-dialog" && beanFormDirty) {
+        showToast("有未保存的修改，请先保存或点「取消」再次确认关闭", "warn");
+        beanFormDirty = false; // 再点一次就关
+        return;
+      }
+      if (dlg.id === "brew-dialog" && brewFormDirty) {
+        showToast("有未保存的修改，请先保存或点「取消」再次确认关闭", "warn");
+        brewFormDirty = false; // 再点一次就关
+        return;
+      }
+      animateDialogClose(dlg);
     })
   );
+
+  // 按 Esc 关闭弹窗时也要检查未保存内容
+  document.querySelectorAll("dialog").forEach((dlg) => {
+    dlg.addEventListener("cancel", function (e) {
+      if (dlg.id === "bean-dialog" && beanFormDirty) {
+        e.preventDefault();
+        showToast("有未保存的修改，请先保存或再按一次 Esc 强制关闭", "warn");
+        beanFormDirty = false;
+        return;
+      }
+      if (dlg.id === "brew-dialog" && brewFormDirty) {
+        e.preventDefault();
+        showToast("有未保存的修改，请先保存或再按一次 Esc 强制关闭", "warn");
+        brewFormDirty = false;
+        return;
+      }
+    });
+  });
 
   // 表单提交
   el("#bean-form").addEventListener("submit", onSaveBean);
   el("#brew-form").addEventListener("submit", onSaveBrew);
+
+  // 表单输入变化 → 标记脏（用于关闭前警告）
+  el("#bean-form").addEventListener("input", function () { markDirty("bean"); });
+  el("#bean-form").addEventListener("change", function () { markDirty("bean"); });
+  el("#brew-form").addEventListener("input", function () { markDirty("brew"); });
+  el("#brew-form").addEventListener("change", function () { markDirty("brew"); });
 
   // 冲煮表单：实时算粉水比 + 养豆天数 + 评分文字
   el("#dose-input").addEventListener("input", updateBrewPreview);
@@ -854,7 +918,10 @@ function onDetailClick(e) {
   if (delBean) deleteBean(delBean);
   if (editBrew) openBrewDialog(editBrew);
   if (repro) reproduceBrew(repro);
-  if (delBrew) { deleteBrew(delBrew); renderBeanDetail(findBrewBeanId(delBrew) ?? null); }
+  if (delBrew) {
+    const beanId = findBrewBeanId(delBrew);
+    deleteBrew(delBrew, function () { if (beanId) renderBeanDetail(beanId); });
+  }
 }
 function findBrewBeanId(brewId) {
   const b = state.brews.find((x) => x.id === brewId);
@@ -864,6 +931,7 @@ function findBrewBeanId(brewId) {
 /* ----- 豆子：打开弹窗 / 保存 / 删除 ----- */
 function openBeanDialog(id) {
   editingBeanId = id;
+  clearDirty("bean");
   const form = el("#bean-form");
   form.reset();
   el("#bean-dialog-title").textContent = id ? "编辑豆子" : "新增豆子";
@@ -904,6 +972,7 @@ function onSaveBean(e) {
   store.save();
   if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
+  clearDirty("bean");
   flashButton(el("#bean-form").querySelector('button[type="submit"]'));
   showToast("豆子已保存 ☕", "success");
   animateDialogClose(el("#bean-dialog"));
@@ -932,7 +1001,9 @@ function deleteBean(id) {
     if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
     renderAll();
     showView("beans");
-    showToast("豆子已删除", "warn");
+    var delMsg = "豆子已删除";
+    if (count > 0) delMsg += "（含其名下 " + count + " 条冲煮记录）";
+    showToast(delMsg, "warn");
   });
 }
 
@@ -944,6 +1015,7 @@ function openBrewDialog(id) {
     return;
   }
   editingBrewId = id;
+  clearDirty("brew");
   const form = el("#brew-form");
   form.reset();
   el("#brew-dialog-title").textContent = id ? "编辑冲煮" : "记录一杯";
@@ -993,6 +1065,19 @@ function onSaveBrew(e) {
   };
   if (!data.beanId) { alert("请选择这杯用的豆子"); return; }
 
+  // 拒绝负数：粉量、水量、闷蒸、水温等不应为负
+  const numFields = [
+    { key: "doseGrams", label: "粉量" },
+    { key: "waterGrams", label: "总水量" },
+    { key: "waterTemp", label: "水温" },
+    { key: "bloomWater", label: "闷蒸水量" },
+    { key: "bloomTime", label: "闷蒸时间" },
+  ];
+  for (const { key, label } of numFields) {
+    const v = parseFloat(data[key]);
+    if (!isNaN(v) && v < 0) { alert(label + "不能是负数，请修改后再保存"); return; }
+  }
+
   if (editingBrewId) {
     const brew = state.brews.find((b) => b.id === editingBrewId);
     Object.assign(brew, data);
@@ -1004,6 +1089,7 @@ function onSaveBrew(e) {
   store.save();
   if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
+  clearDirty("brew");
   flashButton(el("#brew-form").querySelector('button[type="submit"]'));
   showToast("冲煮记录已保存 ☕", "success");
   animateDialogClose(el("#brew-dialog"));
@@ -1014,15 +1100,16 @@ function onSaveBrew(e) {
   }
 }
 
-function deleteBrew(id) {
-  const card = document.querySelector('.brew-card[data-brew="' + id + '"]');
+function deleteBrew(id, onDeleted) {
+  var card = document.querySelector('.brew-card[data-brew="' + id + '"]');
   confirmInline(card || el("#brews-list"), "确定删除这条冲煮记录？此操作无法恢复。", function () {
     state.tombstones.brews[id] = Date.now();
-    state.brews = state.brews.filter((b) => b.id !== id);
+    state.brews = state.brews.filter(function (b) { return b.id !== id; });
     store.save();
     if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
     renderAll();
     showToast("冲煮记录已删除", "warn");
+    if (onDeleted) onDeleted();
   });
 }
 
@@ -1105,7 +1192,8 @@ function reproduceBrew(brewId) {
 function onImportFile(e) {
   const file = e.target.files[0];
   if (!file) return;
-  // 用内联确认代替原生 confirm
+  // 立即重置 input，保证无论确认还是取消都能重选同一文件
+  e.target.value = "";
   confirmInline(el("#btn-import"), "导入会用文件数据【覆盖】当前所有记录，确定继续？（建议先导出备份）", function () {
     var reader = new FileReader();
     reader.onload = function () {
@@ -1114,19 +1202,21 @@ function onImportFile(e) {
         renderAll();
         showView("beans");
         showToast("导入成功 ✅", "success");
+        // 导入后触发云同步，确保多设备能收到导入的数据
+        if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
       } catch (err) {
         showToast("导入失败：" + err.message, "error");
       }
-      e.target.value = "";
     };
     reader.readAsText(file);
   });
-  // confirmInline 是异步的，但这里需要重置 file input 以便能重选同一文件
-  // 在回调里已经重置了
 }
 
 /* ----- 云同步：独立弹窗设置，稳定可靠 ----- */
 function initSync() {
+  // 如果 sync.js 没加载成功（极少发生，但做兜底），静默跳过
+  if (!window.SyncClient) return;
+
   var indicator = document.getElementById("sync-indicator");
   var label = document.getElementById("sync-label");
   var dialog = document.getElementById("sync-dialog");
@@ -1141,6 +1231,15 @@ function initSync() {
       if (s.type === "ok") indicator.classList.add("enabled");
       else if (s.type === "syncing") indicator.classList.add("syncing");
       else if (s.type === "error" || s.type === "auth" || s.type === "offline") indicator.classList.add("error");
+    }
+    // 同步更新页脚文案
+    var footer = document.getElementById("footer-text");
+    if (footer) {
+      if (SyncClient.enabled()) {
+        footer.textContent = "☁️ 云同步已启用 · 多设备数据自动合并 · 建议偶尔「导出备份」";
+      } else {
+        footer.textContent = "数据存于本地浏览器，可设同步码多设备共享 · 建议偶尔「导出备份」";
+      }
     }
   }
 
@@ -1195,6 +1294,18 @@ function initSync() {
   if (SyncClient.enabled()) {
     window.addEventListener("load", function () { SyncClient.syncNow(); });
   }
+
+  // 切回页面时自动同步（比如切到微信看了个消息再回来）
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && SyncClient.enabled()) {
+      SyncClient.syncNow();
+    }
+  });
+
+  // 网络恢复时自动同步
+  window.addEventListener("online", function () {
+    if (SyncClient.enabled()) SyncClient.syncNow();
+  });
 }
 
 /* ========== 启动 ========== */
