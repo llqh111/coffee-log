@@ -429,3 +429,7 @@ body {
   .brew-side { flex-direction: row; align-items: center; justify-content: space-between; }
   .toolbar { width: 100%; }
 }
+
+.sync-panel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.sync-panel input { padding: 4px 6px; }
+.sync-status { color: #888; font-size: 0.9em; }

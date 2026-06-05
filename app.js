@@ -185,6 +185,23 @@ function renderAll() {
   refreshBeanSelects();
 }
 
+// 给同步用：拿到当前完整 state（含 tombstones）
+function getStateForSync() {
+  return { version: 1, beans: state.beans, brews: state.brews, tombstones: state.tombstones };
+}
+
+// 给同步用：用合并结果覆盖本地，存盘并重渲染
+function applyMergedState(merged) {
+  state = {
+    version: 1,
+    beans: merged.beans || [],
+    brews: merged.brews || [],
+    tombstones: merged.tombstones || { beans: {}, brews: {} },
+  };
+  store.save();
+  renderAll();
+}
+
 // --- 豆子列表 ---
 function renderBeans() {
   const grid = el("#beans-grid");
@@ -743,6 +760,7 @@ function onSaveBean(e) {
     state.beans.push({ id: uid(), createdAt: now, updatedAt: now, ...data });
   }
   store.save();
+  if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
   el("#bean-dialog").close();
 }
@@ -763,6 +781,7 @@ function deleteBean(id) {
   }
   state.brews = state.brews.filter((b) => b.beanId !== id); // 连带删除其冲煮
   store.save();
+  if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
   showView("beans");
 }
@@ -833,6 +852,7 @@ function onSaveBrew(e) {
     state.brews.push({ id: uid(), createdAt: now, updatedAt: now, ...data });
   }
   store.save();
+  if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
   el("#brew-dialog").close();
 
@@ -848,6 +868,7 @@ function deleteBrew(id) {
   state.tombstones.brews[id] = Date.now();
   state.brews = state.brews.filter((b) => b.id !== id);
   store.save();
+  if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
   renderAll();
 }
 
@@ -946,7 +967,38 @@ function onImportFile(e) {
   reader.readAsText(file);
 }
 
+/* ----- 云同步：初始化面板 + 自动同步时机 ----- */
+function initSync() {
+  const codeInput = document.getElementById("sync-code");
+  const statusEl = document.getElementById("sync-status");
+  const setStatus = (s) => { if (statusEl) statusEl.textContent = s.text; };
+
+  SyncClient.init({
+    onStatus: setStatus,
+    getLocal: getStateForSync,
+    setLocal: applyMergedState,
+  });
+
+  if (codeInput) codeInput.value = SyncClient.getCode();
+  setStatus(SyncClient.enabled() ? { text: "✅ 已启用" } : { text: "未启用" });
+
+  const saveBtn = document.getElementById("btn-sync-save");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", () => {
+      SyncClient.setCode(codeInput.value);
+      if (SyncClient.enabled()) SyncClient.syncNow();
+      else setStatus({ text: "未启用" });
+    });
+  }
+
+  // 打开即跑一轮（拉取→合并→推送）
+  if (SyncClient.enabled()) {
+    window.addEventListener("load", () => SyncClient.syncNow());
+  }
+}
+
 /* ========== 启动 ========== */
 store.load();
 initEvents();
 renderAll();
+initSync();

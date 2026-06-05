@@ -40,6 +40,14 @@
     </div>
   </header>
 
+  <div id="sync-panel" class="sync-panel">
+    <label>云同步码
+      <input id="sync-code" type="text" placeholder="自设一串不易猜的码" autocomplete="off" />
+    </label>
+    <button id="btn-sync-save" type="button">保存并同步</button>
+    <span id="sync-status" class="sync-status">未启用</span>
+  </div>
+
   <!-- 标签页切换 -->
   <nav class="tabs" id="tabs">
     <button class="tab is-active" data-view="beans" type="button">
