@@ -54,6 +54,11 @@ body {
     radial-gradient(900px 500px at -10% 110%, rgba(192, 138, 62, .10), transparent 60%),
     var(--paper);
   line-height: 1.5;
+  /* iPhone 刘海 + 底部横条安全区 */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* ---------- 纸张噪点纹理 ---------- */
@@ -692,32 +697,188 @@ body {
   }
 }
 
+/* ---------- 响应式：平板 ---------- */
+@media (max-width: 900px) {
+  .site-header { padding: 28px 20px 10px; }
+  .content { padding: 32px 20px 64px; max-width: 100%; }
+  .tabs { padding: 0 20px; max-width: 100%; }
+  .site-footer { padding: 24px 20px 40px; }
+  .dialog { width: min(90vw, 680px); }
+  .beans-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+  .brew-card { grid-template-columns: 90px 1fr auto; gap: 18px; padding: 20px 22px; }
+  .brew-ratio { padding-right: 14px; }
+}
+
 /* ---------- 响应式：手机 ---------- */
 @media (max-width: 620px) {
-  .site-header { padding: 22px 16px 10px; }
-  .content { padding: 28px 16px 56px; }
-  .tabs { padding: 0 16px; }
-  .tab { padding: 12px 10px; font-size: 16px; }
+  /* ---- 基础 ---- */
+  .content { padding: 24px 14px 48px; }
+  .site-footer { padding: 20px 14px 36px; font-size: 10px; letter-spacing: .04em; }
 
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  /* ---- 顶部：堆叠布局 ---- */
+  .site-header {
+    flex-direction: column; align-items: stretch; gap: 14px;
+    padding: 20px 14px 8px;
+  }
+  .brand { gap: 10px; }
+  .brand-mark { width: 42px; height: 42px; font-size: 22px; }
+  .brand-text h1 { font-size: 24px; }
+  .tagline { font-size: 12px; margin-top: 2px; }
 
-  /* 冲煮卡片：手机端改为时间线式 */
+  /* 工具栏：导出导入按钮变小 */
+  .toolbar {
+    width: 100%; justify-content: space-between; gap: 6px; flex-wrap: wrap;
+  }
+  .toolbar .btn {
+    font-size: 12px; padding: 7px 13px;
+  }
+
+  /* 同步指示器：整行可点 */
+  .sync-indicator {
+    order: -1; width: 100%; justify-content: center;
+    padding: 8px 14px; margin-bottom: 4px;
+    border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+    background: var(--paper);
+  }
+  .sync-dropdown { left: 0; right: 0; min-width: auto; }
+
+  /* ---- 标签页：均分宽度 ---- */
+  .tabs {
+    padding: 0 10px; gap: 0; margin-top: 12px;
+    justify-content: space-around;
+  }
+  .tab { padding: 10px 6px; font-size: 15px; flex: 1; justify-content: center; }
+  .tab .tab-count { font-size: 10px; padding: 1px 6px; }
+
+  /* ---- 豆子卡片 ---- */
+  .beans-grid { grid-template-columns: 1fr; gap: 14px; }
+  .bean-card { padding: 20px 22px; border-radius: var(--radius-lg); }
+  .bean-card .bean-name { font-size: 20px; }
+  .bean-card .bean-roaster { font-size: 12px; margin-bottom: 12px; }
+  .chips { margin-bottom: 14px; gap: 4px; }
+  .chip { font-size: 10px; padding: 2px 8px; }
+  .bean-stats { gap: 18px; padding-top: 14px; }
+  .stat .stat-num { font-size: 22px; }
+  .bean-usage .usage-text { font-size: 10px; }
+
+  /* ---- 冲煮卡片：时间线式 ---- */
   .brew-card {
-    grid-template-columns: 1fr; gap: 14px; padding: 20px 20px;
+    grid-template-columns: 1fr; gap: 12px; padding: 18px 18px;
+    border-radius: var(--radius-md);
   }
   .brew-ratio {
     display: flex; align-items: baseline; gap: 8px; text-align: left;
-    border-right: none; border-bottom: 1px dashed var(--line); padding: 0 0 10px;
+    border-right: none; border-bottom: 1px dashed var(--line);
+    padding: 0 0 10px;
   }
-  .brew-side { flex-direction: row; align-items: center; justify-content: space-between; }
-  .toolbar { width: 100%; justify-content: flex-end; }
+  .brew-ratio .ratio-num { font-size: 20px; }
+  .brew-side {
+    flex-direction: row; align-items: center; justify-content: space-between;
+  }
+  .brew-meta { gap: 4px 14px; font-size: 10px; }
+  .brew-meta b { font-size: 12px; }
+  .brew-notes { font-size: 12.5px; }
+  .brew-date { font-size: 11px; }
+  .rating-badge { padding: 3px 8px; }
+  .rating-badge .r-num { font-size: 15px; }
 
-  .detail-head { padding: 24px 22px; }
-  .detail-head h2 { font-size: 26px; }
-  .detail-grid { gap: 20px; }
-  .detail-grid .stat .stat-num { font-size: 22px; }
+  .row-actions { gap: 4px; }
+  .btn-mini { font-size: 11px; padding: 4px 10px; }
 
-  .beans-grid { grid-template-columns: 1fr; gap: 16px; }
+  /* ---- 详情页 ---- */
+  .detail-head { padding: 22px 18px; border-radius: var(--radius-lg); }
+  .detail-head h2 { font-size: 24px; }
+  .detail-head .detail-roaster { font-size: 13px; margin: 4px 0 14px; }
+  .detail-grid { gap: 16px; }
+  .detail-grid .stat .stat-num { font-size: 20px; }
+  .detail-section-title { font-size: 18px; margin-bottom: 12px; }
 
-  .sync-dropdown { right: -60px; min-width: 200px; }
+  /* ---- 弹窗：接近全屏 ---- */
+  .dialog {
+    width: 98vw; max-height: 96vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    margin: auto 0 0; /* 底部对齐，像 iOS 抽屉 */
+  }
+  .form { padding: 20px 18px 22px; }
+  .dialog-title { font-size: 20px; margin-bottom: 16px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+
+  .field > span { font-size: 12px; }
+  .field input, .field select, .field textarea {
+    font-size: 16px; /* 防 iOS 缩放 */ padding: 10px 12px;
+  }
+
+  /* 弹窗按钮区 */
+  .dialog-actions { margin-top: 20px; padding-top: 14px; gap: 8px; }
+  .dialog-actions .btn { flex: 1; text-align: center; font-size: 15px; padding: 12px; }
+
+  /* 实时反馈区 */
+  .live-readout { gap: 8px; margin-bottom: 14px; }
+  .live-readout .readout { padding: 8px; }
+  .readout-value { font-size: 20px; }
+
+  /* 评分滑块 */
+  .rating-field input[type="range"] { height: 6px; }
+  .rating-field input[type="range"]::-webkit-slider-thumb { width: 30px; height: 30px; }
+  .rating-output { font-size: 15px; }
+
+  /* 味道复选框 */
+  .taste-field { padding: 10px 10px 12px; }
+  .taste-options { gap: 6px; }
+  .taste-check { font-size: 12px; padding: 5px 10px; }
+
+  /* ---- 分析页 ---- */
+  .analysis-block { padding: 18px 16px; border-radius: var(--radius-lg); }
+  .analysis-block h3 { font-size: 17px; }
+  .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .recipe-item { padding: 10px 12px; }
+  .recipe-item .ri-value { font-size: 16px; }
+  .compare-row { grid-template-columns: 90px 1fr 50px; gap: 8px; }
+
+  /* ---- 空状态 ---- */
+  .empty { padding: 40px 16px; }
+  .empty .empty-emoji { font-size: 32px; }
+  .empty p { font-size: 16px; }
+
+  /* ---- 筛选栏 ---- */
+  .filter-bar { gap: 10px; }
+  .field-inline select { font-size: 13px; padding: 6px 10px; }
+
+  /* ---- Toast：底部弹出 ---- */
+  .toast-container { top: auto; bottom: 16px; right: 10px; left: 10px; }
+  .toast { max-width: none; text-align: center; font-size: 13px; }
+
+  /* ---- 内联确认条 ---- */
+  .confirm-bar { flex-wrap: wrap; gap: 6px; }
+  .confirm-bar .confirm-text { width: 100%; text-align: center; }
+
+  /* ---- 最佳配方 ---- */
+  .best-recipe { padding: 18px 16px; }
+  .best-head h3 { font-size: 18px; }
+  .best-rating { font-size: 24px; }
+  .br-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .br-item { padding: 8px 10px; }
+  .br-item .br-v { font-size: 14px; }
+
+  /* ---- 调试轨迹 ---- */
+  .traj-point { grid-template-columns: 28px 1fr; gap: 10px; padding-bottom: 14px; }
+  .traj-dot { width: 28px; height: 28px; font-size: 11px; }
+  .traj-point:not(:last-child)::before { left: 13px; top: 28px; }
+
+  /* ---- 页脚 ---- */
+  .site-footer { text-transform: none; letter-spacing: .02em; line-height: 1.6; }
+
+  /* ---- 视图切换动画 ---- */
+  @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } }
+}
+
+/* ---------- 小屏手机（< 400px） ---------- */
+@media (max-width: 400px) {
+  .brand-mark { width: 36px; height: 36px; font-size: 18px; }
+  .brand-text h1 { font-size: 21px; }
+  .tab { font-size: 13px; padding: 8px 4px; }
+  .btn { font-size: 11px; padding: 6px 10px; }
+  .bean-card { padding: 16px 18px; }
+  .brew-card { padding: 14px 14px; }
+  .detail-head { padding: 18px 14px; }
+  .dialog-actions .btn { font-size: 14px; padding: 10px; }
 }
