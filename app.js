@@ -11,21 +11,28 @@
 const STORAGE_KEY = "coffee-log-v1";
 
 // 内存里的当前数据。结构：{ version, beans:[], brews:[] }
-let state = { version: 1, beans: [], brews: [] };
+let state = { version: 1, beans: [], brews: [], tombstones: { beans: {}, brews: {} } };
 
 const store = {
   // 从浏览器读出数据；读不到或坏了就用空数据兜底
   load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        state = {
-          version: 1,
-          beans: Array.isArray(data.beans) ? data.beans : [],
-          brews: Array.isArray(data.brews) ? data.brews : [],
-        };
-      }
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      state = {
+        version: 1,
+        beans: Array.isArray(data.beans) ? data.beans : [],
+        brews: Array.isArray(data.brews) ? data.brews : [],
+        // 墓碑：记录被删除项的 id -> 删除时间，给以后云同步用，永远保证存在
+        tombstones: {
+          beans: (data.tombstones && data.tombstones.beans) || {},
+          brews: (data.tombstones && data.tombstones.brews) || {},
+        },
+      };
+      // 老数据没有 updatedAt，用 createdAt 兜底（再不行用 0）
+      for (const b of state.beans) if (b.updatedAt == null) b.updatedAt = b.createdAt || 0;
+      for (const r of state.brews) if (r.updatedAt == null) r.updatedAt = r.createdAt || 0;
     } catch (e) {
       console.warn("读取本地数据失败，已使用空数据：", e);
     }
@@ -714,8 +721,10 @@ function onSaveBean(e) {
   if (editingBeanId) {
     const bean = findBean(editingBeanId);
     Object.assign(bean, data);
+    bean.updatedAt = Date.now();
   } else {
-    state.beans.push({ id: uid(), createdAt: Date.now(), ...data });
+    const now = Date.now();
+    state.beans.push({ id: uid(), createdAt: now, updatedAt: now, ...data });
   }
   store.save();
   renderAll();
@@ -729,7 +738,13 @@ function deleteBean(id) {
     ? `确定删除「${bean?.name}」吗？\n它名下的 ${count} 条冲煮记录也会一起删除，且无法恢复。`
     : `确定删除「${bean?.name}」吗？此操作无法恢复。`;
   if (!confirm(msg)) return;
+  // 软删除：从内存里移除，但留墓碑，防止以后云同步把删掉的又拉回来
+  const now = Date.now();
+  state.tombstones.beans[id] = now;
   state.beans = state.beans.filter((b) => b.id !== id);
+  for (const r of state.brews) {
+    if (r.beanId === id) state.tombstones.brews[r.id] = now; // 连带删除的冲煮也立墓碑
+  }
   state.brews = state.brews.filter((b) => b.beanId !== id); // 连带删除其冲煮
   store.save();
   renderAll();
@@ -796,8 +811,10 @@ function onSaveBrew(e) {
   if (editingBrewId) {
     const brew = state.brews.find((b) => b.id === editingBrewId);
     Object.assign(brew, data);
+    brew.updatedAt = Date.now();
   } else {
-    state.brews.push({ id: uid(), createdAt: Date.now(), ...data });
+    const now = Date.now();
+    state.brews.push({ id: uid(), createdAt: now, updatedAt: now, ...data });
   }
   store.save();
   renderAll();
@@ -811,6 +828,8 @@ function onSaveBrew(e) {
 
 function deleteBrew(id) {
   if (!confirm("确定删除这条冲煮记录吗？此操作无法恢复。")) return;
+  // 软删除：移除但立墓碑，给以后云同步用
+  state.tombstones.brews[id] = Date.now();
   state.brews = state.brews.filter((b) => b.id !== id);
   store.save();
   renderAll();
