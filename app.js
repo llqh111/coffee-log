@@ -87,6 +87,7 @@ const store = {
 function showToast(message, type) {
   type = type || "";
   var container = document.getElementById("toast-container");
+  if (!container) return; // 安全兜底
   var toast = document.createElement("div");
   toast.className = "toast " + type;
   toast.textContent = message;
@@ -1124,19 +1125,16 @@ function onImportFile(e) {
   // 在回调里已经重置了
 }
 
-/* ----- 云同步：初始化下拉面板 + 自动同步 ----- */
+/* ----- 云同步：独立弹窗设置，稳定可靠 ----- */
 function initSync() {
   var indicator = document.getElementById("sync-indicator");
   var label = document.getElementById("sync-label");
-  var dropdown = document.getElementById("sync-dropdown");
+  var dialog = document.getElementById("sync-dialog");
   var codeInput = document.getElementById("sync-code-input");
-  var saveBtn = document.getElementById("btn-sync-save");
-  var disconnectBtn = document.getElementById("btn-sync-disconnect");
-
-  var lastStatus = { type: "", text: "" };
+  var form = document.getElementById("sync-form");
 
   function updateUI(s) {
-    lastStatus = s;
+    if (!s) return;
     if (label) label.textContent = s.text || "未启用";
     if (indicator) {
       indicator.classList.remove("enabled", "syncing", "error");
@@ -1152,46 +1150,44 @@ function initSync() {
     setLocal: applyMergedState,
   });
 
+  // 初始状态
   if (codeInput) codeInput.value = SyncClient.getCode();
   updateUI(SyncClient.enabled() ? { type: "ok", text: "已启用" } : { type: "", text: "未启用" });
 
-  // 点击指示器 → 切换下拉菜单
-  if (indicator) {
-    indicator.addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (dropdown) dropdown.classList.toggle("is-open");
+  // 点击指示器 → 打开同步设置弹窗
+  if (indicator && dialog) {
+    indicator.addEventListener("click", function () {
+      // 打开前回显当前同步码
+      if (codeInput) codeInput.value = SyncClient.getCode();
+      animateDialogOpen(dialog);
     });
   }
-  // 点击页面其他地方关闭下拉
-  document.addEventListener("click", function () {
-    if (dropdown) dropdown.classList.remove("is-open");
-  });
-  if (dropdown) {
-    dropdown.addEventListener("click", function (e) { e.stopPropagation(); });
+
+  // 弹窗里的取消按钮
+  if (dialog) {
+    dialog.querySelectorAll("[data-close]").forEach(function (btn) {
+      btn.addEventListener("click", function () { animateDialogClose(dialog); });
+    });
   }
 
-  // 保存并同步
-  if (saveBtn) {
-    saveBtn.addEventListener("click", function () {
-      SyncClient.setCode(codeInput ? codeInput.value : "");
+  // 表单提交 = 保存并同步
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var code = codeInput ? codeInput.value.trim() : "";
+      SyncClient.setCode(code);
+
       if (SyncClient.enabled()) {
         SyncClient.syncNow();
+        updateUI({ type: "ok", text: "已启用" });
         showToast("同步码已保存，正在同步…", "success");
       } else {
+        // 清空同步码 = 断开
         updateUI({ type: "", text: "未启用" });
+        showToast("已断开云同步", "warn");
       }
-      if (dropdown) dropdown.classList.remove("is-open");
-    });
-  }
 
-  // 断开同步
-  if (disconnectBtn) {
-    disconnectBtn.addEventListener("click", function () {
-      SyncClient.setCode("");
-      if (codeInput) codeInput.value = "";
-      updateUI({ type: "", text: "未启用" });
-      if (dropdown) dropdown.classList.remove("is-open");
-      showToast("已断开云同步", "warn");
+      animateDialogClose(dialog);
     });
   }
 

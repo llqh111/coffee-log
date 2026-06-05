@@ -127,54 +127,31 @@ body {
 }
 .btn-saved { animation: save-flash 1.2s ease-out; }
 
-/* ---------- 同步指示器（融入 header 右侧） ---------- */
+/* ---------- 同步指示器（header 右侧按钮，点击打开弹窗） ---------- */
 .sync-indicator {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--font-mono); font-size: 11.5px; font-weight: 500;
-  color: var(--ink-soft); cursor: pointer; padding: 6px 12px;
+  font-family: var(--font-body); font-size: 12px; font-weight: 500;
+  color: var(--ink-soft); cursor: pointer; padding: 7px 14px;
   border-radius: 999px; border: 1.5px solid transparent;
+  background: transparent;
   transition: border-color 0.2s, background 0.2s, color 0.2s;
-  user-select: none; position: relative;
+  user-select: none;
 }
-.sync-indicator:hover { border-color: var(--line); background: var(--paper); }
+.sync-indicator:hover { border-color: var(--line); background: var(--paper); color: var(--ink); }
 .sync-indicator .sync-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex: none;
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
   background: var(--line);
   transition: background 0.3s;
 }
 .sync-indicator.enabled .sync-dot { background: var(--good); }
 .sync-indicator.syncing .sync-dot { animation: sync-pulse 0.8s ease-in-out infinite; }
 .sync-indicator.error .sync-dot { background: var(--warn); }
+.sync-indicator.enabled { color: var(--ink); }
 
 @keyframes sync-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: .4; transform: scale(.7); }
 }
-
-/* 同步下拉菜单 */
-.sync-dropdown {
-  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
-  background: var(--paper-2); border: 1px solid var(--line);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-md);
-  padding: 14px 16px; min-width: 240px;
-  display: none;
-}
-.sync-dropdown.is-open { display: block; animation: fade-up .2s var(--ease-out) both; }
-.sync-dropdown label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
-.sync-dropdown input[type="text"] {
-  width: 100%; font-family: var(--font-mono); font-size: 14px; color: var(--ink);
-  padding: 8px 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--line);
-  background: var(--paper); margin-bottom: 10px;
-}
-.sync-dropdown input[type="text"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(184,92,56,.12); }
-.sync-dropdown .sync-actions { display: flex; gap: 8px; }
-.sync-dropdown .sync-actions button {
-  flex: 1; font-size: 12.5px; font-weight: 600; padding: 6px 10px;
-  border-radius: 999px; cursor: pointer; border: 1.5px solid var(--line);
-  background: transparent; color: var(--ink-soft);
-  transition: border-color 0.2s, color 0.2s;
-}
-.sync-dropdown .sync-actions button:hover { border-color: var(--ink); color: var(--ink); }
 
 /* ---------- 标签页 ---------- */
 .tabs {
@@ -737,20 +714,11 @@ body {
     flex-shrink: 0; /* 按钮不压缩 */
   }
 
-  /* 同步指示器：放在工具栏最左侧，紧凑不溢出 */
+  /* 同步指示器：手机端紧凑 */
   .sync-indicator {
-    order: -1; flex-shrink: 1; min-width: 0;
-    padding: 5px 8px; margin: 0;
-    font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    border: 1px solid var(--hairline); border-radius: 999px;
-    background: var(--paper);
-    max-width: 120px; /* 限制宽度，给按钮让位 */
+    font-size: 10px; padding: 5px 10px; max-width: none; flex-shrink: 0;
   }
   .sync-indicator .sync-dot { width: 6px; height: 6px; }
-  .sync-dropdown {
-    left: 0; right: auto; min-width: 220px; max-width: 90vw;
-    top: calc(100% + 8px);
-  }
 
   /* ---- 标签页：均分宽度，防溢出 ---- */
   .tabs {

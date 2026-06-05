@@ -34,19 +34,11 @@
       </div>
     </div>
     <div class="toolbar">
-      <!-- 云同步指示器 -->
-      <div class="sync-indicator" id="sync-indicator" title="云同步状态">
+      <!-- 云同步指示器（点击打开设置弹窗） -->
+      <button class="sync-indicator" id="sync-indicator" type="button" title="点击设置云同步">
         <span class="sync-dot" aria-hidden="true"></span>
         <span id="sync-label">未启用</span>
-        <div class="sync-dropdown" id="sync-dropdown">
-          <label for="sync-code-input">同步码（多设备设成一样的）</label>
-          <input id="sync-code-input" type="text" placeholder="自设一串不易猜的码" autocomplete="off" />
-          <div class="sync-actions">
-            <button id="btn-sync-save" type="button">保存并同步</button>
-            <button id="btn-sync-disconnect" type="button">断开</button>
-          </div>
-        </div>
-      </div>
+      </button>
       <button id="btn-export" class="btn btn-ghost" type="button" title="把所有数据存成一个备份文件">导出备份</button>
       <button id="btn-import" class="btn btn-ghost" type="button" title="从备份文件恢复数据">导入</button>
       <input id="file-import" type="file" accept="application/json,.json" hidden />
@@ -55,6 +47,24 @@
 
   <!-- Toast 通知容器 -->
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- ============ 云同步设置弹窗 ============ -->
+  <dialog id="sync-dialog" class="dialog">
+    <form id="sync-form" method="dialog" class="form">
+      <h3 class="dialog-title">☁️ 云同步设置</h3>
+      <p style="margin:0 0 16px;font-size:13px;color:var(--ink-soft)">
+        多设备设<strong>同一个同步码</strong>，数据自动合并。不填同步码则停用。
+      </p>
+      <label class="field">
+        <span>同步码</span>
+        <input id="sync-code-input" type="text" placeholder="自设一串不易猜的码" autocomplete="off" />
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button id="btn-sync-save" type="submit" class="btn btn-solid">保存并同步</button>
+      </div>
+    </form>
+  </dialog>
 
   <!-- 标签页切换 -->
   <nav class="tabs" id="tabs">

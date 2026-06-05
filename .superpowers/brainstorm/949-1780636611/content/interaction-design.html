@@ -1,0 +1,95 @@
+<h2>交互体系设计 · 每一处触感都有讲究</h2>
+<p class="subtitle">所有交互围绕「纸制品触感」——柔、慢、有回应。点击选项看具体效果描述</p>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">🎬 弹窗 · 从纸面浮现</h3>
+  <p style="font-size:14px;color:var(--ink-soft, #6f5a48);margin-top:0">
+    现在：突然出现（原生 showModal）。<br>
+    优化后：从页面中心放大+淡入（scale 0.92→1.0 + opacity 0→1），300ms 缓出曲线。<br>
+    关闭时反向缩回（150ms），比打开更快——符合「进场隆重、退场干脆」的直觉。<br>
+    背景遮罩从透明渐暗，营造「纸面升起一层」的层次感。
+  </p>
+</div>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">🃏 卡片悬停 · 纸张轻轻浮起</h3>
+  <p style="font-size:14px;color:#6f5a48;margin-top:0">
+    现在：hover 时 translateY(-3px) + 阴影加深。<br>
+    优化后：<br>
+    · 浮起动画用 spring-like 贝塞尔曲线（cubic-bezier(0.34, 1.56, 0.64, 1)），有轻微「弹」的感觉<br>
+    · 豆子卡片左缘铜橘线保持现有设计（很好！）<br>
+    · 新增：hover 时卡片边缘从 hairline 过渡到铜橘色，像被咖啡渍浸润<br>
+    · 冲煮卡片 hover 时左侧粉水比数字微微放大（1.05x）
+  </p>
+</div>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">🏷️ 标签切换 · 滑动下划线</h3>
+  <p style="font-size:14px;color:#6f5a48;margin-top:0">
+    现在：is-active 直接变色+底部边框。<br>
+    优化后：底部指示条从旧标签平滑滑动到新标签（transition: left 0.3s cubic-bezier），像用手指划过标签。<br>
+    内容区切换：fade-up 动画保留（现有），但 duration 从 0.4s 调为 0.35s，减少等待感。
+  </p>
+</div>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">⭐ 评分交互 · 从数字到感受</h3>
+  <p style="font-size:14px;color:#6f5a48;margin-top:0">
+    现在：原生 range 滑块。<br>
+    优化后：<br>
+    · 自定义滑块轨道：左半段铜橘暖色渐变 → 右半段中性灰，视觉上「越高越暖」<br>
+    · 拖拽时 output 数字弹跳一下（scale 1.15 + 颜色闪到 accent）<br>
+    · 滑到 8+ 时轨道末端出现一个小小的金色星标 ✦<br>
+    · 数值显示从「8.5 / 10」变成大字「8.5」+ 小字「/ 10」，突出分数本身
+  </p>
+</div>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">🗑️ 删除操作 · 温柔但确认</h3>
+  <p style="font-size:14px;color:#6f5a48;margin-top:0">
+    现在：原生 confirm() 弹窗。<br>
+    优化后：<br>
+    · 改为应用内的确认卡片（不是浏览器弹窗）：从卡片原位展开一个小确认条<br>
+    · 「确定删除？」+ 红色删除按钮 + 灰色取消<br>
+    · 确认后该卡片/行做一个简短的淡出收缩动画再消失<br>
+    · 删除成功后在顶部滑入一条简短提示（toast），3秒后自动消失
+  </p>
+</div>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">📝 表单交互 · 填入时有回应</h3>
+  <p style="font-size:14px;color:#6f5a48;margin-top:0">
+    现在：聚焦时蓝色框（accent 色 ring）。<br>
+    优化后：<br>
+    · 保留 accent 色 ring，但加上过渡动画（ring 从透明渐显）<br>
+    · 输入框用等宽字体（数字类保持），placeholder 颜色更柔和<br>
+    · 必填字段未填时，标签旁的红星做一次微小的抖动提示<br>
+    · 粉水比 / 养豆天数的实时预览数字变化时加一个小脉冲动画
+  </p>
+</div>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">📋 列表入场 · 像翻页一样展开</h3>
+  <p style="font-size:14px;color:#6f5a48;margin-top:0">
+    现在：一次性全部渲染。<br>
+    优化后：冲煮记录和豆子卡片以交错动画入场（每个延迟 40-60ms），像手指翻过一叠记录。<br>
+    只在页面初次加载和切换标签时触发，筛选/排序时不用（避免过度动画）。<br>
+    用 IntersectionObserver 只在可见时触发动画，不在折叠区的卡片不浪费性能。
+  </p>
+</div>
+
+<div class="section">
+  <h3 style="margin-bottom:6px">🔔 微小反馈 · 润物细无声</h3>
+  <p style="font-size:14px;color:#6f5a48;margin-top:0">
+    表单保存成功 → 按钮短暂变成绿色+勾号，然后恢复<br>
+    同步成功 → 状态文字从灰变绿 2 秒后恢复<br>
+    导出成功 → 顶部滑入 toast：「☕ 备份已保存」<br>
+    豆子用完 → 卡片上养豆天数旁显示半透明进度环（已用/总量）
+  </p>
+</div>
+
+<div style="margin-top:32px;padding:16px;background:rgba(184,92,56,.08);border-radius:12px;border-left:3px solid var(--accent,#b85c38)">
+  <p style="margin:0;font-size:14px"><b>动画原则：</b>所有 duration 控制在 150-350ms，用 ease-out / spring 曲线。<br>
+  prefers-reduced-motion 用户自动跳过所有非必要动画。<br>
+  每个动画都有目的——传达状态变化、引导注意力、或提供触感反馈。</p>
+</div>
