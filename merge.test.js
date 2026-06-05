@@ -54,3 +54,10 @@ test("brews 同样按规则合并", () => {
   const out = mergeState(a, b);
   assert.strictEqual(out.brews[0].score, 9);
 });
+
+test("删除时间正好等于记录修改时间 → 记录被删掉（删除胜出）", () => {
+  const a = S([{ id: "x", updatedAt: 9 }]);
+  const b = S([], [], { beans: { x: 9 }, brews: {} });
+  const out = mergeState(a, b);
+  assert.strictEqual(out.beans.length, 0);
+});
