@@ -58,6 +58,7 @@ function json(data, status = 200) {
 }
 
 export async function onRequestGet({ request, env }) {
+  if (!env.SYNC_KV) return json({ error: "KV 未绑定，请检查 wrangler.toml 的 SYNC_KV 配置" }, 500);
   const code = codeFrom(request);
   if (!code) return json({ error: "缺少同步码" }, 401);
   const raw = await env.SYNC_KV.get(await keyFor(code));
@@ -65,6 +66,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
+  if (!env.SYNC_KV) return json({ error: "KV 未绑定，请检查 wrangler.toml 的 SYNC_KV 配置" }, 500);
   const code = codeFrom(request);
   if (!code) return json({ error: "缺少同步码" }, 401);
   let incoming;
