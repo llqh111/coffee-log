@@ -1,5 +1,11 @@
 # ☕ 手冲手记 · 咖啡冲煮记录本
 
+[![在线体验](https://img.shields.io/badge/🚀-立即体验-b85c38?style=for-the-badge)](https://llqh111.github.io/coffee-log/)
+
+> **打开即用，零安装。** 记录每一杯手冲的参数，自动找出你的高分配方规律。
+
+![截图占位：主界面](https://via.placeholder.com/800x400/efe6d6/2a1c12?text=📸+截图占位：豆柜/冲煮记录（替换为真实截图）)
+
 记录每一杯手冲咖啡的变量——咖啡豆、养豆天数、研磨度、水温、粉水比、评分与风味笔记，并自动**找出你的高分配方规律**。
 
 纯前端网页应用：零安装即可用，数据默认存在浏览器本地。支持 **云同步**（自设同步码即可多设备共享）和 **导出/导入备份**。已做成 **PWA**，手机可「添加到主屏幕」像 App 一样使用、并可离线。
@@ -28,4 +34,13 @@
 
 ## 技术
 
-原生 HTML + CSS + JavaScript，无框架、无构建步骤。`index.html` / `style.css` / `app.js` + `merge.js`（合并算法）/ `sync.js`（云同步客户端）+ PWA 三件套（`manifest.webmanifest` / `sw.js` / `icon.svg`）。后端为 Cloudflare Pages Functions + KV。
+原生 HTML + CSS + JavaScript，无框架、无构建步骤。`index.html` / `style.css` / `app.js` + `merge.js`（合并算法）/ `sync.js`（云同步客户端）+ `share.js`（分享卡片生成）+ PWA 三件套（`manifest.webmanifest` / `sw.js` / `icon.svg`）。后端为 Cloudflare Pages Functions + KV。
+
+## 💬 反馈与建议
+
+有问题、建议，或想分享你的使用体验？欢迎通过以下方式联系：
+
+- **GitHub Issues**：[提交反馈](https://github.com/llqh111/coffee-log/issues)（推荐，方便跟踪讨论）
+- **邮箱**：`lqh082652@gmail.com`
+
+每一条反馈都能让这个工具变得更好 ☕

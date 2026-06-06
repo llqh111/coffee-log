@@ -24,7 +24,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="手冲手记" />
 
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
   <!-- 纸张噪点纹理层（纯装饰，盖在最底层） -->
@@ -145,6 +145,11 @@
 
   <footer class="site-footer">
     <span id="footer-text">数据存于本地浏览器，可设同步码多设备共享 · 建议偶尔「导出备份」</span>
+    <span class="footer-feedback">
+      <a href="https://github.com/llqh111/coffee-log/issues" target="_blank" rel="noopener">💬 反馈建议</a>
+      <span class="footer-dot">·</span>
+      <span>📧 邮箱反馈请查看 README</span>
+    </span>
   </footer>
 
   <!-- ============ 弹窗：新增/编辑 咖啡豆 ============ -->
@@ -307,27 +312,33 @@
   </dialog>
 
   <!-- ============ 全屏冲煮计时器 ============ -->
-  <div class="brew-timer-overlay" id="brew-timer-overlay" aria-hidden="true">
+  <div class="brew-timer-overlay" id="brew-timer-overlay" role="dialog" aria-modal="true" aria-label="冲煮计时器" aria-hidden="true">
     <div class="timer-top">
       <button id="timer-exit" class="timer-exit" type="button">← 退出</button>
       <span id="timer-bean-label" class="timer-bean-name"></span>
       <span class="timer-spacer"></span>
     </div>
     <div class="timer-center">
-      <div class="timer-big-num" id="timer-display">0:00</div>
-      <div class="timer-stage-hint" id="timer-stage-label">准备好就点开始</div>
+      <div class="timer-readout">
+        <div class="timer-big-num" id="timer-display">0:00</div>
+        <div class="timer-stage-hint" id="timer-stage-label">准备好就点开始</div>
+        <!-- 暂停态徽标：仅 .is-paused 时显示，紧贴提示下方 -->
+        <div class="timer-paused-badge" aria-hidden="true">已暂停</div>
+      </div>
     </div>
     <div class="timer-stage-list" id="timer-stage-list"></div>
     <div class="timer-actions">
-      <button id="timer-main-btn" class="timer-main-btn">▶ 开始</button>
-      <button id="timer-stop-btn" class="timer-stop-btn">停止</button>
+      <button id="timer-pause-btn" class="timer-pause-btn" type="button">⏸ 暂停</button>
+      <button id="timer-main-btn" class="timer-main-btn" type="button">▶ 开始</button>
+      <button id="timer-stop-btn" class="timer-stop-btn" type="button">停止</button>
     </div>
   </div>
 
-  <script src="merge.js?v=5"></script>
-  <script src="sync.js?v=5"></script>
-  <script src="timer.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="merge.js?v=6"></script>
+  <script src="sync.js?v=6"></script>
+  <script src="timer.js?v=6"></script>
+  <script src="app.js?v=6"></script>
+  <script src="share.js?v=6"></script>
 
   <!-- 注册 Service Worker：让程序能离线打开（仅在网址 http/https 下生效，本地双击会自动跳过） -->
   <script>

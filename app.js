@@ -499,7 +499,10 @@ function bestRecipeHTML(brew) {
     <div class="best-head"><h3>🎯 最佳配方</h3><span class="best-rating">${esc(brew.rating)}<small>/10</small></span></div>
     <p class="best-sub">这包豆你打分最高的一杯，照着复现它 ↓</p>
     <div class="br-grid">${rows}</div>
-    <button class="btn btn-solid" data-repro="${brew.id}">照这个再冲一杯</button>
+    <div class="recipe-actions">
+      <button class="btn btn-solid" data-repro="${brew.id}">照这个再冲一杯</button>
+      <button class="btn btn-ghost" data-share-bean="${brew.beanId}" data-share-brew="${brew.id}">📷 生成分享图</button>
+    </div>
   </div>`;
 }
 
@@ -952,10 +955,17 @@ function onDetailClick(e) {
   const editBrew = e.target.closest("[data-edit-brew]")?.dataset.editBrew;
   const delBrew = e.target.closest("[data-del-brew]")?.dataset.delBrew;
   const repro = e.target.closest("[data-repro]")?.dataset.repro;
+  const shareBrew = e.target.closest("[data-share-brew]")?.dataset.shareBrew;
+  const shareBean = e.target.closest("[data-share-brew]")?.dataset.shareBean;
   if (editBean) openBeanDialog(editBean);
   if (delBean) deleteBean(delBean);
   if (editBrew) openBrewDialog(editBrew);
   if (repro) reproduceBrew(repro);
+  if (shareBrew) {
+    var _b = state.brews.find(function (x) { return x.id === shareBrew; });
+    var _bn = findBean(shareBean);
+    if (_b && _bn) showShareDialog(_bn, _b);
+  }
   if (delBrew) {
     const beanId = findBrewBeanId(delBrew);
     deleteBrew(delBrew, function () { if (beanId) renderBeanDetail(beanId); });

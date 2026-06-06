@@ -868,45 +868,60 @@ body {
   .dialog-actions .btn { font-size: 14px; padding: 10px; }
 }
 
-/* ====== 全屏冲煮计时器 ====== */
+/* ====== 全屏冲煮计时器 ======
+   美学接回主界面：奶油纸底 · 咖啡棕 · 铜赭橘 · 数据等宽字体。
+   （历史遗留 bug：原来用了 --surface/--border 等不存在的变量，
+     var() 失效会让背景退成 transparent，全屏层变透明——已全部换成真实令牌） */
 .brew-timer-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: var(--surface);
   display: none;
   flex-direction: column;
   align-items: center;
-  padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
-  font-family: var(--font-ui);
+  padding: calc(env(safe-area-inset-top) + 6px) 22px calc(env(safe-area-inset-bottom) + 10px);
+  font-family: var(--font-body);
   color: var(--ink);
+  /* 与主界面同款纸底，保证不透明、不跑风格 */
+  background:
+    radial-gradient(1100px 560px at 110% -10%, rgba(184, 92, 56, .14), transparent 60%),
+    radial-gradient(820px 460px at -10% 110%, rgba(192, 138, 62, .13), transparent 60%),
+    var(--paper);
 }
-
 .brew-timer-overlay.is-active {
   display: flex;
+  animation: timer-overlay-in .34s var(--ease-out);
+}
+@keyframes timer-overlay-in {
+  from { opacity: 0; transform: scale(1.015); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* 顶部栏 */
 .timer-top {
   width: 100%;
+  max-width: 460px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
+  padding: 10px 0 6px;
   gap: 12px;
 }
 .timer-exit {
   background: none;
   border: none;
+  font-family: var(--font-body);
   font-size: 15px;
   color: var(--ink-soft);
   cursor: pointer;
-  padding: 8px 0;
+  padding: 8px 2px;
   flex-shrink: 0;
+  transition: opacity .15s, transform .1s;
 }
-.timer-exit:active { opacity: 0.6; }
+.timer-exit:active { opacity: 0.6; transform: scale(0.96); }
 .timer-bean-name {
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 600;
   color: var(--ink);
   text-align: center;
@@ -923,57 +938,115 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+}
+/* 数字+提示+暂停徽标紧贴成一组，徽标以此为锚 */
+.timer-readout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 .timer-big-num {
-  font-size: clamp(64px, 15vw, 96px);
-  font-weight: 700;
+  font-size: clamp(68px, 17vw, 104px);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -1px;
+  letter-spacing: -2px;
   line-height: 1;
-  font-family: 'Spline Sans Mono', 'Courier New', monospace;
+  font-family: var(--font-mono);
+  color: var(--ink);
+  text-shadow: 0 1px 0 var(--paper-2);
+  transition: color .3s var(--ease-out), opacity .3s var(--ease-out);
 }
 .timer-stage-hint {
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
   color: var(--ink-soft);
   transition: color 0.2s;
+}
+/* 暂停徽标：默认藏起，.is-paused 时浮现，锚在提示正下方居中 */
+.timer-paused-badge {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--accent-dk);
+  background: rgba(184, 92, 56, .12);
+  border: 1px solid rgba(184, 92, 56, .28);
+  border-radius: 999px;
+  padding: 4px 14px;
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px);
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+}
+.is-paused .timer-paused-badge {
+  opacity: 1;
+  transform: translateX(-50%);
+  animation: timer-pause-pulse 1.6s var(--ease-in-out) infinite;
+}
+.is-paused .timer-big-num {
+  color: var(--ink-soft);
+  opacity: .55;
+}
+@keyframes timer-pause-pulse {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
 }
 
 /* 分段列表 */
 .timer-stage-list {
   width: 100%;
-  max-width: 360px;
-  max-height: 180px;
+  max-width: 380px;
+  max-height: 190px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 20px;
-  padding: 0 4px;
+  gap: 7px;
+  margin-bottom: 18px;
+  padding: 2px 4px;
+  -webkit-overflow-scrolling: touch;
 }
 .timer-stage {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--surface-raised);
-  transition: background 0.3s, opacity 0.3s;
+  gap: 11px;
+  padding: 9px 13px;
+  border-radius: var(--radius-md);
+  background: var(--paper-2);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-sm);
+  transition: background .3s, opacity .3s, border-color .3s;
+  animation: timer-stage-in .3s var(--ease-spring);
+}
+@keyframes timer-stage-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
 }
 .timer-stage.done {
-  opacity: 0.6;
+  opacity: 0.62;
 }
 .timer-stage.current {
-  background: var(--accent-light, #f0e6d3);
+  background: linear-gradient(180deg, #fbf4e6, var(--paper-2));
+  border-color: rgba(184, 92, 56, .35);
   opacity: 1;
 }
 .ts-num {
-  width: 24px; height: 24px;
+  width: 26px; height: 26px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--paper-2);
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -982,48 +1055,124 @@ body {
 .timer-stage.done .ts-num { background: var(--ink-soft); }
 .ts-label {
   flex: 1;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 500;
+  color: var(--ink);
 }
 .ts-time {
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  font-family: 'Spline Sans Mono', 'Courier New', monospace;
+  font-family: var(--font-mono);
+  color: var(--accent-dk);
 }
+
+/* ========== 最佳配方行内按钮组 ========== */
+.recipe-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.recipe-actions .btn {
+  font-size: 14px;
+  padding: 8px 18px;
+}
+
+/* ========== 分享弹窗 ========== */
+.share-dialog { max-width: 520px; }
+.share-inner { padding: 6px 0; }
+.share-hint {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 2px 0 14px;
+}
+.share-preview-wrap {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,.12);
+}
+.share-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.share-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.share-actions .btn {
+  font-size: 15px;
+  padding: 10px 24px;
+}
+
+/* ========== 底部反馈链接 ========== */
+.footer-feedback {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.footer-feedback a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.footer-feedback a:hover { text-decoration: underline; }
+.footer-dot { margin: 0 6px; opacity: .5; }
 
 /* 底部按钮 */
 .timer-actions {
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   display: flex;
-  gap: 12px;
-  padding-bottom: 16px;
+  gap: 10px;
+  padding-bottom: 14px;
 }
+.timer-pause-btn,
 .timer-main-btn,
 .timer-stop-btn {
-  flex: 1;
-  padding: 18px 0;
-  border-radius: 14px;
-  font-size: 18px;
+  padding: 17px 0;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 17px;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: transform 0.1s, opacity 0.15s;
+  transition: transform 0.1s var(--ease-spring), background .2s, color .2s, box-shadow .2s;
 }
 .timer-main-btn {
-  flex: 2;
+  flex: 1 1 auto;
   background: var(--accent);
-  color: #fff;
+  color: var(--paper-2);
+  box-shadow: 0 10px 22px -12px rgba(143, 68, 39, .9);
+}
+.timer-pause-btn {
+  flex: 0 0 auto;
+  min-width: 96px;
+  background: var(--paper-2);
+  color: var(--ink-soft);
+  border: 1.5px solid var(--line);
+}
+/* 暂停态：让「继续」按钮抢眼一点 */
+.is-paused .timer-pause-btn {
+  background: var(--gold);
+  color: var(--paper-2);
+  border-color: var(--gold);
 }
 .timer-stop-btn {
-  background: var(--surface-raised);
+  flex: 0 0 auto;
+  min-width: 84px;
+  background: var(--paper-2);
   color: var(--ink-soft);
-  border: 1.5px solid var(--border);
+  border: 1.5px solid var(--line);
 }
+.timer-pause-btn:active,
 .timer-main-btn:active,
 .timer-stop-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 /* 「记录一杯」弹窗里的启动按钮 */
@@ -1034,14 +1183,16 @@ body {
 .btn-timer {
   width: 100%;
   padding: 14px 0;
+  font-family: var(--font-body);
   font-size: 17px;
   font-weight: 600;
   background: var(--accent);
-  color: #fff;
+  color: var(--paper-2);
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: transform 0.1s;
+  box-shadow: 0 10px 22px -14px rgba(143, 68, 39, .85);
+  transition: transform 0.1s var(--ease-spring);
 }
 .btn-timer:active { transform: scale(0.98); }
 .timer-hint {
@@ -1056,5 +1207,5 @@ body {
 }
 @keyframes timer-flash {
   0%, 100% { background: transparent; }
-  50% { background: var(--accent-light, #f0e6d3); }
+  50% { background: #f6ecd9; }
 }
