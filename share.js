@@ -224,6 +224,79 @@ function generateShareImage(bean, brew) {
   return canvas;
 }
 
+/* =========================================================
+   保存 / 分享 —— 底层工具（已写好，可直接用）
+   ========================================================= */
+
+// 粗略识别移动端（含微信内置浏览器 MicroMessenger）
+function isMobile() {
+  var ua = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod|HarmonyOS|MicroMessenger/i.test(ua);
+}
+
+// 触发桌面下载（手机上 a.download 多半无效，仅桌面/兜底用）
+function triggerDownload(blob, filename) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+// 调系统分享面板：返回 Promise
+//   成功 resolve；不支持或用户取消会 reject（取消时 err.name === 'AbortError'）
+function shareImageFile(blob) {
+  if (!navigator.canShare) return Promise.reject(new Error('unsupported'));
+  var file = new File([blob], 'coffee-best-recipe.png', { type: 'image/png' });
+  if (!navigator.canShare({ files: [file] })) return Promise.reject(new Error('unsupported'));
+  return navigator.share({ files: [file], title: '☕ 我的最佳配方' });
+}
+
+// 让预览框脉冲高亮一下，配合「长按保存」的引导
+function pulsePreview(img) {
+  if (!img) return;
+  var target = img.closest('.share-preview-wrap') || img;
+  target.classList.remove('pulse-hint');
+  void target.offsetWidth; // 强制回流，重启动画
+  target.classList.add('pulse-hint');
+}
+
+/* ── 点「保存 / 分享」时怎么走（三层降级）── 整个功能的灵魂 ──
+   可用的工具：
+     isMobile()                         -> true=手机, false=桌面
+     shareImageFile(blob)               -> Promise；成功=分享成功，reject=不支持/取消
+     triggerDownload(blob, '名字.png')    -> 桌面下载（别拿它当手机主路径）
+     showToast('文字', 'success')        -> 右上角提示（第二参传 'success' 是绿色成功样式）
+     pulsePreview(previewImg)            -> 预览图脉冲高亮
+   reject 出来的 err：err && err.name === 'AbortError' 表示用户自己点了取消，不算失败、别再降级。
+
+   推荐策略（你也可以按自己的想法调）：
+     ① 先 shareImageFile(blob) —— .then 成功就结束
+     ② .catch 里：先判断是不是用户取消(AbortError) -> 是就直接 return，什么都不做
+     ③ 不是取消（说明不支持/失败）：桌面 -> triggerDownload + showToast('已保存到下载文件夹','success')
+     ④                              手机 -> showToast('长按上方图片即可保存到相册') + pulsePreview(previewImg)
+*/
+function handleSaveOrShare(blob, previewImg) {
+  // ① 首选：系统分享面板（微信/小红书可直接选）
+  shareImageFile(blob).catch(function (err) {
+    // ② 用户主动取消 → 静默结束，不算失败、不降级
+    if (err && err.name === 'AbortError') return;
+    // ③ 不支持 / 真失败 → 按平台降级
+    if (isMobile()) {
+      // 手机：a.download 多半无效，引导长按存图（最可靠）
+      showToast('长按上方图片即可保存到相册');
+      pulsePreview(previewImg);
+    } else {
+      // 桌面：直接下载 PNG
+      triggerDownload(blob, 'coffee-best-recipe.png');
+      showToast('已保存到下载文件夹', 'success');
+    }
+  });
+}
+
 /* ── 弹出分享对话框 ── */
 function showShareDialog(bean, brew) {
   // 移除已有弹窗
@@ -238,12 +311,14 @@ function showShareDialog(bean, brew) {
   dialog.innerHTML =
     '<div class="share-inner">' +
       '<h3 class="dialog-title">📷 分享最佳配方</h3>' +
-      '<p class="share-hint">长按图片可保存到相册，或点下方按钮分享</p>' +
+      '<p class="share-hint">' + (isMobile()
+        ? '长按图片即可保存到相册，或点下方按钮分享'
+        : '点下方按钮下载图片，或右键图片另存为') + '</p>' +
       '<div class="share-preview-wrap">' +
-        '<img class="share-preview" src="' + canvas.toDataURL('image/png') + '" alt="最佳配方卡片" />' +
+        '<img class="share-preview" id="share-preview-img" src="' + canvas.toDataURL('image/png') + '" alt="最佳配方卡片" />' +
       '</div>' +
       '<div class="share-actions">' +
-        '<button class="btn btn-solid" id="btn-share-dl">💾 保存 / 分享</button>' +
+        '<button class="btn btn-solid" id="btn-share-dl">' + (isMobile() ? '📤 分享 / 保存' : '💾 下载图片') + '</button>' +
         '<button class="btn btn-ghost" data-close-share>关闭</button>' +
       '</div>' +
     '</div>';
@@ -255,26 +330,12 @@ function showShareDialog(bean, brew) {
   dialog.querySelector('[data-close-share]').addEventListener('click', closeShare);
   dialog.addEventListener('click', function (e) { if (e.target === dialog) closeShare(); });
 
-  // 保存 / 分享按钮
+  // 保存 / 分享按钮 → 交给三层降级决策（见 handleSaveOrShare）
+  var previewImg = dialog.querySelector('#share-preview-img');
   dialog.querySelector('#btn-share-dl').addEventListener('click', function () {
     canvas.toBlob(function (blob) {
-      // 手机上优先走系统分享面板（可发微信/朋友圈/小红书等）
-      if (navigator.share && navigator.canShare) {
-        var file = new File([blob], 'coffee-best-recipe.png', { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], title: '☕ 我的最佳配方' }).catch(function () {});
-          return;
-        }
-      }
-      // 桌面 / 不支持分享 → 下载
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'coffee-best-recipe.png';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      if (!blob) { showToast('图片生成失败，请重试'); return; }
+      handleSaveOrShare(blob, previewImg);
     }, 'image/png');
   });
 
