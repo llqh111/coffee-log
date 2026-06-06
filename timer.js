@@ -1,4 +1,4 @@
-/* 冲煮计时器：全屏分段计时 + 墙上时钟计时。
+/* 冲煮计时器：全屏分段计时 + 墙上时钟计时 + 暂停/继续。
    不碰数据存储，只测时间、报节点。
    用法：
      BrewTimer.start({ beanName: "耶加雪菲", onFinish: fn })
@@ -24,22 +24,37 @@ function buildResult(timestamps) {
   return { totalSec: totalSec, bloomSec: bloomSec, stages: stages };
 }
 
+/* ====== 纯函数：已过毫秒（含暂停扣减，可单测） ======
+   now           当前时刻 Date.now()
+   startTime     开始时刻
+   pausedMs      此前累计已暂停的毫秒
+   pauseStartedAt 本次暂停开始时刻；0 表示当前没在暂停
+   返回：真实流逝毫秒（扣掉所有暂停时间，永不为负） */
+function elapsedMsFrom(now, startTime, pausedMs, pauseStartedAt) {
+  var ms = now - startTime - (pausedMs || 0);
+  if (pauseStartedAt) ms -= (now - pauseStartedAt); // 正在暂停，连这一段也扣掉 → 数字冻住
+  return ms < 0 ? 0 : ms;
+}
+
 /* ====== BrewTimer：UI 状态机 ====== */
 var BrewTimer = (function () {
   var startTime = 0;         // 开始时刻（Date.now()）
+  var pausedMs = 0;          // 累计已暂停毫秒
+  var pauseStartedAt = 0;    // 本次暂停开始时刻；0 = 没在暂停
   var timestamps = [];       // [{label, sec}] 打点记录
   var displayTimer = null;   // 刷新界面数字的 interval id
   var wakeLock = null;       // Wake Lock 对象
   var onFinish = null;       // 完成回调
   var beanName = "";
   var hasStarted = false;    // 是否已经开始过计时
-  var lastStageSec = 0;      // 上次打点时的累计秒，用于防抖
+  var finished = false;      // 是否已结束（防 teardown 重入）
 
-  // 防抖最小间隔（秒）
-  var DEBOUNCE_SEC = 1;
+  // 按钮防抖：同一动作 350ms 内只认一次（防手抖双击丢段/重段）
+  var ACTION_LOCK_MS = 350;
+  var lastActionAt = 0;
 
   // --- DOM 引用（延迟取，start 时才拿） ---
-  var overlay, timeDisplay, stageLabel, stageList, mainBtn, stopBtn, beanLabel, exitBtn;
+  var overlay, timeDisplay, stageLabel, stageList, mainBtn, stopBtn, pauseBtn, beanLabel, exitBtn;
   function cacheDom() {
     overlay = document.getElementById("brew-timer-overlay");
     timeDisplay = document.getElementById("timer-display");
@@ -47,13 +62,14 @@ var BrewTimer = (function () {
     stageList = document.getElementById("timer-stage-list");
     mainBtn = document.getElementById("timer-main-btn");
     stopBtn = document.getElementById("timer-stop-btn");
+    pauseBtn = document.getElementById("timer-pause-btn");
     beanLabel = document.getElementById("timer-bean-label");
     exitBtn = document.getElementById("timer-exit");
   }
 
-  // --- 墙上时钟：当前已过秒数（用 Date.now() 算，防后台节流漂移） ---
+  // --- 墙上时钟：当前已过秒数（用 Date.now() 算，防后台节流漂移，含暂停扣减） ---
   function elapsedSec() {
-    return Math.round((Date.now() - startTime) / 1000);
+    return Math.round(elapsedMsFrom(Date.now(), startTime, pausedMs, pauseStartedAt) / 1000);
   }
 
   // --- 格式化 mm:ss ---
@@ -66,17 +82,12 @@ var BrewTimer = (function () {
   // --- 刷新界面数字 ---
   function updateDisplay() {
     if (!timeDisplay) return;
-    var sec = elapsedSec();
-    timeDisplay.textContent = fmt(sec);
+    timeDisplay.textContent = fmt(elapsedSec());
   }
 
-  // --- 添加一条打点 ---
+  // --- 添加一条打点（按钮级锁已保证不会误触，这里总是如实记录） ---
   function addStage(label) {
-    var sec = elapsedSec();
-    // 防抖：1 秒内忽略重复点击
-    if (sec - lastStageSec < DEBOUNCE_SEC) return;
-    lastStageSec = sec;
-    timestamps.push({ label: label, sec: sec });
+    timestamps.push({ label: label, sec: elapsedSec() });
     renderStageList();
   }
 
@@ -103,10 +114,21 @@ var BrewTimer = (function () {
     return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
 
+  // --- 按钮级防抖：同一动作 350ms 内只认一次；暂停中不接受换段 ---
+  function guard(fn) {
+    return function () {
+      if (pauseStartedAt) return;                   // 暂停时屏蔽换段
+      var now = Date.now();
+      if (now - lastActionAt < ACTION_LOCK_MS) return;
+      lastActionAt = now;
+      fn();
+    };
+  }
+
   // --- Wake Lock（屏幕常亮，冲的时候不让手机息屏） ---
   async function requestWakeLock() {
     try {
-      if ("wakeLock" in navigator) {
+      if ("wakeLock" in navigator && document.visibilityState === "visible") {
         wakeLock = await navigator.wakeLock.request("screen");
         wakeLock.addEventListener("release", function () { wakeLock = null; });
       }
@@ -119,9 +141,16 @@ var BrewTimer = (function () {
     }
   }
 
+  // --- 切回前台时重新申请 Wake Lock（浏览器切后台会自动释放） ---
+  function onVisibility() {
+    if (document.visibilityState === "visible" && hasStarted && !finished && !pauseStartedAt) {
+      requestWakeLock();
+    }
+  }
+
   // --- beforeunload 拦截（防误刷新） ---
   function onBeforeUnload(e) {
-    if (hasStarted) {
+    if (hasStarted && !finished) {
       e.preventDefault();
       e.returnValue = "";
     }
@@ -135,7 +164,30 @@ var BrewTimer = (function () {
     }
   }
 
-  // --- 主按钮文字切换（克隆节点以解绑旧监听器） ---
+  // --- 暂停 / 继续 ---
+  function togglePause() {
+    if (!hasStarted || finished) return;
+    if (pauseStartedAt) {
+      // 继续：把这次暂停时长累加进 pausedMs，时钟接着走
+      pausedMs += Date.now() - pauseStartedAt;
+      pauseStartedAt = 0;
+      if (overlay) overlay.classList.remove("is-paused");
+      if (pauseBtn) pauseBtn.textContent = "⏸ 暂停";
+      requestWakeLock();
+      if (!displayTimer) displayTimer = setInterval(updateDisplay, 250);
+      updateDisplay();
+    } else {
+      // 暂停：记下此刻，停掉刷新，数字冻住，松开屏幕常亮
+      pauseStartedAt = Date.now();
+      if (overlay) overlay.classList.add("is-paused");
+      if (pauseBtn) pauseBtn.textContent = "▶ 继续";
+      if (displayTimer) { clearInterval(displayTimer); displayTimer = null; }
+      updateDisplay();
+      releaseWakeLock();
+    }
+  }
+
+  // --- 主按钮文字切换（克隆节点以解绑旧监听器；action 自动套防抖锁） ---
   function setMainButton(label, action) {
     if (!mainBtn) return;
     mainBtn.textContent = label;
@@ -144,7 +196,7 @@ var BrewTimer = (function () {
     mainBtn.parentNode.replaceChild(clone, mainBtn);
     mainBtn = clone;
     if (label && action) {
-      mainBtn.addEventListener("click", action);
+      mainBtn.addEventListener("click", guard(action));
     }
   }
 
@@ -176,11 +228,15 @@ var BrewTimer = (function () {
 
     // 重置状态
     startTime = Date.now();
+    pausedMs = 0;
+    pauseStartedAt = 0;
     timestamps = [];
     hasStarted = false;
-    lastStageSec = 0;
+    finished = false;
+    lastActionAt = 0;
 
     // 设置界面
+    overlay.classList.remove("is-paused");
     if (beanLabel) beanLabel.textContent = beanName;
     if (timeDisplay) timeDisplay.textContent = "0:00";
     if (stageLabel) stageLabel.textContent = "准备好就点开始";
@@ -197,9 +253,17 @@ var BrewTimer = (function () {
       stopBtn = sc;
       stopBtn.addEventListener("click", function () { teardown(false); });
     }
+    if (pauseBtn) {
+      pauseBtn.textContent = "⏸ 暂停";
+      var pc = pauseBtn.cloneNode(true);
+      pauseBtn.parentNode.replaceChild(pc, pauseBtn);
+      pauseBtn = pc;
+      pauseBtn.addEventListener("click", togglePause);
+    }
 
-    // 显示界面
+    // 显示界面（同时切换无障碍可见性）
     overlay.classList.add("is-active");
+    overlay.setAttribute("aria-hidden", "false");
 
     // 申请 Wake Lock
     requestWakeLock();
@@ -208,8 +272,9 @@ var BrewTimer = (function () {
     displayTimer = setInterval(updateDisplay, 250);
     updateDisplay();
 
-    // 拦截误关闭
+    // 拦截误关闭 + 切回前台重申屏幕常亮
     window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("visibilitychange", onVisibility);
     if (exitBtn) {
       var ec = exitBtn.cloneNode(true);
       exitBtn.parentNode.replaceChild(ec, exitBtn);
@@ -220,16 +285,25 @@ var BrewTimer = (function () {
 
   // --- 停止 / 退出 ---
   function teardown(aborted) {
+    if (finished) return;   // 防双击「停止」重入
+    finished = true;
+
     if (displayTimer) { clearInterval(displayTimer); displayTimer = null; }
     releaseWakeLock();
     window.removeEventListener("beforeunload", onBeforeUnload);
+    document.removeEventListener("visibilitychange", onVisibility);
 
-    if (overlay) overlay.classList.remove("is-active");
+    if (overlay) {
+      overlay.classList.remove("is-active");
+      overlay.classList.remove("is-paused");
+      overlay.setAttribute("aria-hidden", "true");
+    }
 
     var result = null;
     if (!aborted) {
-      var sec = elapsedSec();
-      timestamps.push({ label: "停止", sec: sec });
+      // 若停在暂停态，先结算暂停时长，保证总时间准确
+      if (pauseStartedAt) { pausedMs += Date.now() - pauseStartedAt; pauseStartedAt = 0; }
+      timestamps.push({ label: "停止", sec: elapsedSec() });
       result = buildResult(timestamps);
     }
 
@@ -241,3 +315,8 @@ var BrewTimer = (function () {
 
   return { start: start };
 })();
+
+/* 给 Node 测试用（浏览器里 module 不存在，会跳过） */
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { buildResult: buildResult, elapsedMsFrom: elapsedMsFrom };
+}

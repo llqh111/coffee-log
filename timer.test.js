@@ -8,26 +8,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
 
-// ========== 被测试的函数（内联实现） ==========
-
-function buildResult(timestamps) {
-  var arr = timestamps || [];
-  if (arr.length === 0) {
-    return { totalSec: 0, bloomSec: null, stages: [] };
-  }
-  var last = arr[arr.length - 1];
-  var totalSec = last.sec;
-  // 闷蒸 = 第一条 label 含"闷蒸"的记录
-  var bloom = null;
-  for (var i = 0; i < arr.length; i++) {
-    if (arr[i].label.indexOf("闷蒸") !== -1) { bloom = arr[i]; break; }
-  }
-  var bloomSec = bloom ? bloom.sec : null;
-  // stages = 去掉最后一项（如果是停止），其余全部保留
-  var lastIsStop = last.label === "停止";
-  var stages = lastIsStop ? arr.slice(0, -1) : arr.slice();
-  return { totalSec: totalSec, bloomSec: bloomSec, stages: stages };
-}
+// 直接引入源码的纯函数，避免内联副本和实现漂移
+const { buildResult, elapsedMsFrom } = require("./timer.js");
 
 // ========== 正常流程 ==========
 
@@ -97,4 +79,37 @@ test("buildResult(undefined) → 返回默认值", () => {
   assert.strictEqual(r.totalSec, 0, "undefined 时 totalSec 应为 0，实际 " + r.totalSec);
   assert.strictEqual(r.bloomSec, null, "undefined 时 bloomSec 应为 null，实际 " + r.bloomSec);
   assert.strictEqual(r.stages.length, 0, "undefined 时 stages 应为空数组，实际长度 " + r.stages.length);
+});
+
+// ========== elapsedMsFrom：暂停算账（纯函数） ==========
+// 参数：(now, startTime, pausedMs, pauseStartedAt)
+// 真实流逝 = now − startTime − 已结算暂停 − 当前正在进行的暂停
+
+test("从没暂停过 → 就是 now−startTime", () => {
+  // 开始于 1000，现在 6000，没暂停 → 5000ms
+  assert.strictEqual(elapsedMsFrom(6000, 1000, 0, 0), 5000);
+});
+
+test("有过一次已结束的暂停 → 扣掉累计暂停", () => {
+  // 流逝 10s，其中暂停过 3s → 7000ms
+  assert.strictEqual(elapsedMsFrom(11000, 1000, 3000, 0), 7000);
+});
+
+test("正在暂停中 → 数字冻住（连当前这段也扣）", () => {
+  // 开始 1000，现在 9000（墙上过了 8s），本次暂停从 6000 开始
+  // 暂停前已走 5s，暂停中不应增长 → 仍是 5000ms
+  assert.strictEqual(elapsedMsFrom(9000, 1000, 0, 6000), 5000);
+  // 再过 2 秒（now=11000）仍冻在 5000
+  assert.strictEqual(elapsedMsFrom(11000, 1000, 0, 6000), 5000);
+});
+
+test("先结算一次暂停、又正在暂停中 → 两段都扣", () => {
+  // 墙上 12s，已结算暂停 2s，当前暂停从 9000 起（此刻 now=13000，距开始 1000 过了 12s）
+  // = 12000 − 2000 − (13000−9000)=4000 → 6000ms
+  assert.strictEqual(elapsedMsFrom(13000, 1000, 2000, 9000), 6000);
+});
+
+test("异常输入不为负 → 兜底 0", () => {
+  assert.strictEqual(elapsedMsFrom(1000, 5000, 0, 0), 0, "now 早于 startTime 也不应为负");
+  assert.strictEqual(elapsedMsFrom(5000, 1000, 99999, 0), 0, "暂停超过总时长也兜底 0");
 });
