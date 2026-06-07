@@ -1,6 +1,6 @@
 # ☕ 手冲手记 · 咖啡冲煮记录本
 
-[![在线体验](https://img.shields.io/badge/🚀-立即体验-b85c38?style=for-the-badge)](https://llqh111.github.io/coffee-log/)
+[![在线体验](https://img.shields.io/badge/🚀-立即体验-b85c38?style=for-the-badge)](https://coffee-log-b2o.pages.dev/)
 
 > **打开即用，零安装。** 记录每一杯手冲的参数，自动找出你的高分配方规律。
 
@@ -12,7 +12,7 @@
 
 ## 🌐 在线使用
 
-👉 **https://llqh111.github.io/coffee-log/**
+👉 **https://coffee-log-b2o.pages.dev/**
 
 手机浏览器打开上面的网址即可使用。想像 App 一样用：
 - **安卓 Chrome**：菜单 → 「添加到主屏幕 / 安装应用」
@@ -32,6 +32,8 @@
 
 所有记录默认保存在你浏览器的 localStorage。如启用云同步，数据会通过你自设的同步码加密传输到 Cloudflare KV 存储——只有知道同步码的人能访问。
 
+为了解工具有多少人用、用得怎么样，应用会上报极少量**匿名使用计数**（如"有人新建了第一杯记录""有人开了云同步"），且每台设备每个事件只报一次。**这里不包含你的任何咖啡数据、不记录 IP、不写 Cookie、无法定位到个人**，只是几个累加的数字。实现见 [`functions/api/track.js`](functions/api/track.js)。
+
 ## 技术
 
 原生 HTML + CSS + JavaScript，无框架、无构建步骤。`index.html` / `style.css` / `app.js` + `merge.js`（合并算法）/ `sync.js`（云同步客户端）+ `share.js`（分享卡片生成）+ PWA 三件套（`manifest.webmanifest` / `sw.js` / `icon.svg`）。后端为 Cloudflare Pages Functions + KV。
@@ -41,6 +43,6 @@
 有问题、建议，或想分享你的使用体验？欢迎通过以下方式联系：
 
 - **GitHub Issues**：[提交反馈](https://github.com/llqh111/coffee-log/issues)（推荐，方便跟踪讨论）
-- **邮箱**：`lqh082652@gmail.com`
+- **邮箱**：`6042948@qq.com`
 
 每一条反馈都能让这个工具变得更好 ☕

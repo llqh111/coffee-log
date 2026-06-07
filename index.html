@@ -24,7 +24,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="手冲手记" />
 
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
   <!-- 纸张噪点纹理层（纯装饰，盖在最底层） -->
@@ -44,6 +44,7 @@
         <span class="sync-dot" aria-hidden="true"></span>
         <span id="sync-label">未启用</span>
       </button>
+      <button id="btn-demo" class="btn btn-ghost btn-demo" type="button" title="快速加载几包豆子和冲煮记录，看看软件能做什么">✨ 演示数据</button>
       <button id="btn-export" class="btn btn-ghost" type="button" title="把所有数据存成一个备份文件">导出备份</button>
       <button id="btn-import" class="btn btn-ghost" type="button" title="从备份文件恢复数据">导入</button>
       <input id="file-import" type="file" accept="application/json,.json" hidden />
@@ -148,7 +149,7 @@
     <span class="footer-feedback">
       <a href="https://github.com/llqh111/coffee-log/issues" target="_blank" rel="noopener">💬 反馈建议</a>
       <span class="footer-dot">·</span>
-      <span>📧 邮箱反馈请查看 README</span>
+      <a href="mailto:6042948@qq.com">📧 6042948@qq.com</a>
     </span>
   </footer>
 
@@ -217,16 +218,11 @@
     <form id="brew-form" method="dialog" class="form">
       <h3 class="dialog-title" id="brew-dialog-title">记录一杯</h3>
 
-      <div class="grid-2">
-        <label class="field">
-          <span>这杯用的豆子 <em>*</em></span>
-          <select name="beanId" id="brew-bean-select" required></select>
-        </label>
-        <label class="field">
-          <span>冲煮日期</span>
-          <input name="brewDate" id="brew-date" type="date" />
-        </label>
-      </div>
+      <!-- 核心区：新手友好的 6 个关键字段，其余折叠（UX 诊断：打断崖①） -->
+      <label class="field">
+        <span>这杯用的豆子 <em>*</em></span>
+        <select name="beanId" id="brew-bean-select" required></select>
+      </label>
 
       <!-- 实时反馈区：粉水比 + 养豆天数 -->
       <div class="live-readout">
@@ -240,7 +236,7 @@
         </div>
       </div>
 
-      <div class="grid-3">
+      <div class="grid-2">
         <label class="field">
           <span>粉量 (g) <em>*</em></span>
           <input name="doseGrams" id="dose-input" type="number" min="0" step="0.1" required placeholder="15" />
@@ -249,42 +245,13 @@
           <span>总水量 (g) <em>*</em></span>
           <input name="waterGrams" id="water-input" type="number" min="0" step="1" required placeholder="225" />
         </label>
-        <label class="field">
-          <span>水温 (°C)</span>
-          <input name="waterTemp" type="number" min="0" max="100" step="0.5" placeholder="92" />
-        </label>
       </div>
 
-      <div class="grid-3">
-        <label class="field">
-          <span>研磨度</span>
-          <input name="grind" type="text" placeholder="如：C40 20格" />
-        </label>
-        <label class="field">
-          <span>闷蒸水量 (g)</span>
-          <input name="bloomWater" type="number" min="0" step="1" placeholder="30" />
-        </label>
-        <label class="field">
-          <span>闷蒸时间 (秒)</span>
-          <input name="bloomTime" type="number" min="0" step="1" placeholder="30" />
-        </label>
-      </div>
-
-      <div class="grid-3">
-        <label class="field">
-          <span>总冲煮时间</span>
-          <input name="totalTime" type="text" inputmode="numeric" placeholder="2:30" pattern="[0-9]{1,2}:[0-5][0-9]" title="格式：分:秒，如 2:30" />
-        </label>
-        <label class="field">
-          <span>器具</span>
-          <input name="gear" type="text" placeholder="如：V60 + 云朵壶" />
-        </label>
-        <label class="field rating-field">
-          <span>评分（1–10）</span>
-          <input name="rating" id="rating-input" type="range" min="0" max="10" step="0.5" value="0" />
-          <output id="rating-output" class="rating-output">未评分</output>
-        </label>
-      </div>
+      <label class="field rating-field">
+        <span>评分（1–10）</span>
+        <input name="rating" id="rating-input" type="range" min="0" max="10" step="0.5" value="0" />
+        <output id="rating-output" class="rating-output">未评分</output>
+      </label>
 
       <label class="field">
         <span>风味笔记</span>
@@ -297,6 +264,45 @@
         <div class="taste-options" id="taste-options"><!-- JS 填充复选框 --></div>
         <div class="taste-advice" id="taste-advice-preview"><!-- JS 实时填充建议 --></div>
       </fieldset>
+
+      <!-- 冲煮细节：折叠区，老手点"展开"拿回全部精度 -->
+      <details class="brew-details" id="brew-details">
+        <summary>⚙️ 冲煮细节（水温、研磨、闷蒸、器具…）</summary>
+        <div class="grid-2" style="margin-top:0.75rem">
+          <label class="field">
+            <span>冲煮日期</span>
+            <input name="brewDate" id="brew-date" type="date" />
+          </label>
+          <label class="field">
+            <span>水温 (°C)</span>
+            <input name="waterTemp" type="number" min="0" max="100" step="0.5" placeholder="92" />
+          </label>
+        </div>
+        <div class="grid-3">
+          <label class="field">
+            <span>研磨度</span>
+            <input name="grind" type="text" placeholder="如：C40 20格" />
+          </label>
+          <label class="field">
+            <span>闷蒸水量 (g)</span>
+            <input name="bloomWater" type="number" min="0" step="1" placeholder="30" />
+          </label>
+          <label class="field">
+            <span>闷蒸时间 (秒)</span>
+            <input name="bloomTime" type="number" min="0" step="1" placeholder="30" />
+          </label>
+        </div>
+        <div class="grid-2">
+          <label class="field">
+            <span>总冲煮时间</span>
+            <input name="totalTime" type="text" inputmode="numeric" placeholder="2:30" pattern="[0-9]{1,2}:[0-5][0-9]" title="格式：分:秒，如 2:30" />
+          </label>
+          <label class="field">
+            <span>器具</span>
+            <input name="gear" type="text" placeholder="如：V60 + 云朵壶" />
+          </label>
+        </div>
+      </details>
 
       <!-- 冲煮计时器启动入口（仅新增时显示，JS 控制显隐） -->
       <div class="brew-timer-launch" id="brew-timer-launch" style="display:none">
@@ -337,8 +343,8 @@
   <script src="merge.js?v=7"></script>
   <script src="sync.js?v=7"></script>
   <script src="timer.js?v=7"></script>
-  <script src="app.js?v=7"></script>
-  <script src="share.js?v=7"></script>
+  <script src="app.js?v=9"></script>
+  <script src="share.js?v=9"></script>
 
   <!-- 注册 Service Worker：让程序能离线打开（仅在网址 http/https 下生效，本地双击会自动跳过） -->
   <script>

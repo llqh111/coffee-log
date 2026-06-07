@@ -563,6 +563,23 @@ body {
 .suggest-line { font-size: 16px; line-height: 1.9; }
 .suggest-line b { font-family: var(--font-mono); color: var(--gold); font-weight: 600; padding: 0 2px; }
 
+/* ---------- 阿哈时刻：晒卡片引导（自传播引擎） ---------- */
+.share-aha {
+  display: flex; align-items: center; gap: 16px;
+  background: linear-gradient(135deg, rgba(212, 165, 116, .16), rgba(184, 92, 56, .10));
+  border: 1px solid rgba(212, 165, 116, .45);
+  border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 20px;
+}
+.share-aha-text { flex: 1; min-width: 0; }
+.share-aha-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+.share-aha-sub { font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
+.share-aha-btn { background: var(--accent); color: #fff; border-color: var(--accent); white-space: nowrap; flex-shrink: 0; }
+.share-aha-btn:hover { background: var(--accent-dk); border-color: var(--accent-dk); }
+@media (max-width: 560px) {
+  .share-aha { flex-direction: column; align-items: stretch; text-align: center; }
+  .share-aha-btn { width: 100%; }
+}
+
 .compare-row { display: grid; grid-template-columns: 120px 1fr 64px; align-items: center; gap: 12px; margin-bottom: 10px; }
 .compare-row .cr-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compare-row .cr-bar-wrap { background: var(--line); border-radius: 999px; height: 12px; overflow: hidden; }
@@ -844,6 +861,15 @@ body {
   .br-item { padding: 8px 10px; }
   .br-item .br-v { font-size: 14px; }
 
+  /* ---- 分享弹窗 ---- */
+  .share-summary { gap: 10px; padding-bottom: 16px; margin-bottom: 14px; }
+  .share-summary-icon { font-size: 30px; }
+  .share-summary-name { font-size: 18px; }
+  .share-card-frame { padding: 8px; }
+  .share-hint { font-size: 12.5px; margin-top: 12px; }
+  .share-actions { margin-top: 14px; }
+  .share-actions .btn { font-size: 14px; padding: 8px 18px; }
+
   /* ---- 调试轨迹 ---- */
   .traj-point { grid-template-columns: 28px 1fr; gap: 10px; padding-bottom: 14px; }
   .traj-dot { width: 28px; height: 28px; font-size: 11px; }
@@ -1080,17 +1106,68 @@ body {
 }
 
 /* ========== 分享弹窗 ========== */
-.share-dialog { max-width: 520px; }
-.share-inner { padding: 6px 0; }
-.share-hint {
-  color: var(--ink-soft);
-  font-size: 14px;
-  margin: 2px 0 14px;
+.share-dialog {
+  max-width: 560px;
 }
-.share-preview-wrap {
-  border-radius: var(--radius-md);
+.share-inner {
+  padding: 28px 30px 30px;
+}
+
+/* 顶部摘要：豆名 + 评分 */
+.share-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 0 22px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+.share-summary-icon {
+  font-size: 36px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.share-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.share-summary-name {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
   overflow: hidden;
-  box-shadow: 0 2px 16px rgba(0,0,0,.12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.share-summary-meta {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.share-summary-rating {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gold);
+  font-style: normal;
+}
+
+/* 卡片框：模拟一张实体配方卡的装裱效果 */
+.share-card-frame {
+  background: var(--paper);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--line);
+}
+.share-card-inner {
+  border-radius: calc(var(--radius-md) - 4px);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  line-height: 0;
 }
 .share-preview {
   display: block;
@@ -1102,24 +1179,46 @@ body {
   -webkit-user-select: none;
   user-select: none;
 }
-/* 「长按保存」引导：预览框脉冲高亮一下（放在 wrap 上，避免被 overflow 裁掉）*/
-.share-preview-wrap.pulse-hint {
+
+/* 提示文字 */
+.share-hint {
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 18px 0 8px;
+  text-align: center;
+}
+
+/* 「长按保存」引导：预览框脉冲高亮一下（放在外层卡片框上）*/
+.share-card-frame.pulse-hint {
   animation: sharePulse 0.9s ease;
 }
 @keyframes sharePulse {
-  0%, 100% { box-shadow: 0 2px 16px rgba(0,0,0,.12); }
-  35%      { box-shadow: 0 2px 16px rgba(0,0,0,.12), 0 0 0 6px rgba(184, 92, 56, 0.45); }
+  0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
+  35%      { box-shadow: var(--shadow-sm), 0 0 0 1px var(--line), 0 0 0 6px rgba(184, 92, 56, 0.4); }
 }
 .share-actions {
   display: flex;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 20px;
   justify-content: center;
   flex-wrap: wrap;
 }
 .share-actions .btn {
   font-size: 15px;
   padding: 10px 24px;
+}
+
+/* 强调按钮：accent 色（分享/下载主操作） */
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-accent:hover {
+  background: var(--accent-dk);
+  border-color: var(--accent-dk);
+  box-shadow: var(--shadow-md);
 }
 
 /* ========== 底部反馈链接 ========== */

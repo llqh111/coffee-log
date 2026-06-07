@@ -5,7 +5,7 @@
 
 // ---- 改水印文案改这里 ----
 var SHARE_BRAND = '手冲手记 · 咖啡冲煮记录本';
-var SHARE_URL   = 'https://llqh111.github.io/coffee-log/';
+var SHARE_URL   = 'https://coffee-log-b2o.pages.dev/';
 
 // 卡片尺寸（2x 高清输出，手机上看也清晰）
 var CW = 750;
@@ -20,6 +20,29 @@ var C = {
   accent:  '#b85c38',
   gold:    '#c08a3e',
 };
+
+// 字体分工（跟 style.css 的 --font-display / --font-body / --font-mono 一致）
+//   断网或字体没加载时，会自动退回后面的系统字体，画面不会塌。
+var FF_DISP = '"Fraunces","Songti SC","STSong",Georgia,serif';   // 衬线标题：豆名 / 评分 / 风味笔记
+var FF_BODY = '"Hanken Grotesk","PingFang SC","Microsoft YaHei",sans-serif'; // 正文 / chips
+var FF_MONO = '"Spline Sans Mono","Cascadia Code",ui-monospace,monospace';   // 数据 / 标签 / 网址
+
+// 安全设置字间距（旧浏览器没有 letterSpacing 就跳过，不报错）
+function _ls(ctx, v) { try { ctx.letterSpacing = v; } catch (e) {} }
+
+// 画卡片前先确保品牌字体就绪：逐个 load 需要的字号字重，失败就静默退回系统字体
+function ensureShareFonts() {
+  if (!document || !document.fonts || !document.fonts.load) return Promise.resolve();
+  var faces = [
+    '600 46px Fraunces', '600 80px Fraunces', 'italic 500 24px Fraunces',
+    '500 28px "Spline Sans Mono"', '500 19px "Spline Sans Mono"',
+    '500 18px "Spline Sans Mono"', '500 17px "Spline Sans Mono"',
+    '600 22px "Hanken Grotesk"', '500 18px "Hanken Grotesk"'
+  ];
+  return Promise.all(faces.map(function (f) {
+    return document.fonts.load(f).catch(function () {});
+  })).catch(function () {});
+}
 
 // ---- Canvas 小工具 ----
 function _wrapText(ctx, text, maxW) {
@@ -74,52 +97,54 @@ function generateShareImage(bean, brew) {
   ctx.fillStyle = C.ink;
   ctx.fillRect(0, 0, CW, topH);
 
-  // 小标签
+  // 小标签（mono 微标签，跟全站 .u-label 一致：等宽 + 字间距）
   ctx.fillStyle = C.accent;
-  ctx.font = 'bold 20px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 18px ' + FF_MONO;
+  _ls(ctx, '1.5px');
   ctx.fillText('☕ 最佳配方', 56, 54);
+  _ls(ctx, '0px');
 
-  // 豆名（长名字自动换行）
+  // 豆名（衬线标题，长名字自动换行）
   ctx.fillStyle = C.paper;
-  ctx.font = 'bold 46px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '600 46px ' + FF_DISP;
   var nameLines = _wrapText(ctx, bean.name, CW - 200);
   nameLines.forEach(function (line, i) {
     ctx.fillText(line, 56, 110 + i * 52);
   });
   var nameBottom = 110 + (nameLines.length - 1) * 52;
 
-  // 烘焙商
+  // 烘焙商（正文）
   ctx.fillStyle = C.line;
-  ctx.font = '22px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 22px ' + FF_BODY;
   ctx.fillText(bean.roaster || '', 56, nameBottom + 38);
 
-  // 评分（右上角大字）
+  // 评分（右上角大字，衬线 + 铜金）
   var rating = brew.rating || '?';
   var rText = String(rating);
   ctx.fillStyle = C.gold;
-  ctx.font = 'bold 80px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '600 80px ' + FF_DISP;
   var rW = ctx.measureText(rText).width;
   ctx.fillText(rText, CW - 56 - rW - 58, 110);
   ctx.fillStyle = C.paper;
-  ctx.font = '26px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 26px ' + FF_BODY;
   ctx.fillText('/10', CW - 56 - 58 + rW + 10, 110);
 
-  // 冲煮日期
+  // 冲煮日期（数据 → 等宽）
   ctx.fillStyle = C.soft;
-  ctx.font = '20px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 18px ' + FF_MONO;
   ctx.fillText(brew.brewDate || '', CW - 56 - rW - 58, 170);
 
-  // 标签 chips
+  // 标签 chips（正文；先定字体再量宽，宽度才准）
   var chips = [bean.process, bean.origin, bean.roastLevel].filter(Boolean);
   var chipX = 56;
   var chipY = nameBottom + 78;
+  ctx.font = '500 18px ' + FF_BODY;
   chips.forEach(function (t) {
     var tw = ctx.measureText(t).width + 28;
     ctx.fillStyle = 'rgba(239,230,214,0.16)';
     _roundRect(ctx, chipX, chipY - 18, tw, 32, 16);
     ctx.fill();
     ctx.fillStyle = C.paper;
-    ctx.font = '18px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
     ctx.fillText(t, chipX + 14, chipY + 4);
     chipX += tw + 12;
   });
@@ -153,10 +178,10 @@ function generateShareImage(bean, brew) {
     var py = gridY + row * rowH;
 
     ctx.fillStyle = C.soft;
-    ctx.font = '19px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+    ctx.font = '500 18px ' + FF_MONO;
     ctx.fillText(p.k, px, py + 20);
     ctx.fillStyle = C.ink;
-    ctx.font = 'bold 28px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+    ctx.font = '500 28px ' + FF_MONO;
     ctx.fillText(p.v, px, py + 54);
   });
 
@@ -175,28 +200,28 @@ function generateShareImage(bean, brew) {
   var statsY = sepY + 48;
 
   ctx.fillStyle = C.soft;
-  ctx.font = '19px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 18px ' + FF_MONO;
   ctx.fillText('养豆天数', col1X, statsY);
   ctx.fillStyle = C.ink;
-  ctx.font = 'bold 32px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 32px ' + FF_MONO;
   ctx.fillText(rest != null ? String(rest) + ' 天' : '—', col1X, statsY + 38);
 
   ctx.fillStyle = C.soft;
-  ctx.font = '19px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 18px ' + FF_MONO;
   ctx.fillText('累计冲煮', col2X, statsY);
   ctx.fillStyle = C.ink;
-  ctx.font = 'bold 32px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 32px ' + FF_MONO;
   ctx.fillText(String(totalBrews) + ' 杯', col2X, statsY + 38);
 
   /* ── 风味笔记 ── */
   var noteY = statsY + 80;
   if (brew.notes) {
     ctx.fillStyle = C.soft;
-    ctx.font = '19px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+    ctx.font = '500 18px ' + FF_MONO;
     ctx.fillText('风味笔记', 56, noteY);
 
     ctx.fillStyle = C.ink;
-    ctx.font = 'italic 24px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+    ctx.font = 'italic 500 24px ' + FF_DISP;
     var noteLines = _wrapText(ctx, '"' + brew.notes + '"', CW - 112);
     noteLines.forEach(function (line, i) {
       ctx.fillText(line, 56, noteY + 38 + i * 34);
@@ -215,10 +240,13 @@ function generateShareImage(bean, brew) {
 
   ctx.fillStyle = C.soft;
   ctx.textAlign = 'center';
-  ctx.font = '21px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.font = '500 21px ' + FF_DISP;
   ctx.fillText(SHARE_BRAND, CW / 2, wmY);
-  ctx.font = '17px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  ctx.fillStyle = C.accent;
+  ctx.font = '500 16px ' + FF_MONO;
+  _ls(ctx, '0.5px');
   ctx.fillText(SHARE_URL, CW / 2, wmY + 28);
+  _ls(ctx, '0px');
   ctx.textAlign = 'left';
 
   return canvas;
@@ -258,7 +286,7 @@ function shareImageFile(blob) {
 // 让预览框脉冲高亮一下，配合「长按保存」的引导
 function pulsePreview(img) {
   if (!img) return;
-  var target = img.closest('.share-preview-wrap') || img;
+  var target = img.closest('.share-card-frame') || img;
   target.classList.remove('pulse-hint');
   void target.offsetWidth; // 强制回流，重启动画
   target.classList.add('pulse-hint');
@@ -299,26 +327,51 @@ function handleSaveOrShare(blob, previewImg) {
 
 /* ── 弹出分享对话框 ── */
 function showShareDialog(bean, brew) {
+  // 漏斗第 4 环：自传播——用户生成了分享卡片（track 定义在 app.js，typeof 守卫防意外）
+  if (typeof track === 'function') track('share_card');
+
   // 移除已有弹窗
   var old = document.getElementById('share-dialog');
   if (old) old.remove();
 
+  // 先等品牌字体就绪再画卡片（通常早已加载好，立即返回；首次/断网会退回系统字体）
+  ensureShareFonts().then(function () { _buildShareDialog(bean, brew); });
+}
+
+function _buildShareDialog(bean, brew) {
   var canvas = generateShareImage(bean, brew);
+  var rating = brew.rating || '?';
+  var ratingText = String(rating) + ' / 10';
 
   var dialog = document.createElement('dialog');
   dialog.id = 'share-dialog';
   dialog.className = 'dialog share-dialog';
   dialog.innerHTML =
     '<div class="share-inner">' +
-      '<h3 class="dialog-title">📷 分享最佳配方</h3>' +
-      '<p class="share-hint">' + (isMobile()
-        ? '长按图片即可保存到相册，或点下方按钮分享'
-        : '点下方按钮下载图片，或右键图片另存为') + '</p>' +
-      '<div class="share-preview-wrap">' +
-        '<img class="share-preview" id="share-preview-img" src="' + canvas.toDataURL('image/png') + '" alt="最佳配方卡片" />' +
+      // 顶部摘要：豆名 + 评分，一眼就知道在分享什么
+      '<div class="share-summary">' +
+        '<span class="share-summary-icon">☕</span>' +
+        '<div class="share-summary-text">' +
+          '<strong class="share-summary-name">' + esc(bean.name) + '</strong>' +
+          '<span class="share-summary-meta">' +
+            (bean.roaster ? esc(bean.roaster) + ' · ' : '') +
+            '<em class="share-summary-rating">' + ratingText + '</em>' +
+          '</span>' +
+        '</div>' +
       '</div>' +
+      // 预览卡片：装饰边框模拟一张实体配方卡
+      '<div class="share-card-frame">' +
+        '<div class="share-card-inner">' +
+          '<img class="share-preview" id="share-preview-img" src="' + canvas.toDataURL('image/png') + '" alt="最佳配方卡片" />' +
+        '</div>' +
+      '</div>' +
+      // 平台提示
+      '<p class="share-hint">' + (isMobile()
+        ? '📱 长按上方卡片 → 保存到相册；或点下方按钮分享给朋友'
+        : '🖥 右键上方卡片 → 另存为图片；或点下方按钮直接下载') + '</p>' +
+      // 按钮组
       '<div class="share-actions">' +
-        '<button class="btn btn-solid" id="btn-share-dl">' + (isMobile() ? '📤 分享 / 保存' : '💾 下载图片') + '</button>' +
+        '<button class="btn btn-accent" id="btn-share-dl">' + (isMobile() ? '📤 分享 / 保存' : '💾 下载图片') + '</button>' +
         '<button class="btn btn-ghost" data-close-share>关闭</button>' +
       '</div>' +
     '</div>';

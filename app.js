@@ -715,6 +715,9 @@ function renderAnalysis() {
 
   const tops = topBrews(list);
 
+  // 漏斗第 3 环（北极星）：记满 5 杯并看到分析——产品真正发挥价值的时刻
+  if (list.length >= 5) track("aha_5cups");
+
   // —— 块①：高分配方共性 ——
   const recipeItems = [];
   for (const m of NUMERIC_METRICS) {
@@ -743,6 +746,9 @@ function renderAnalysis() {
   // —— 块②：下次试试建议 ——
   const suggestParts = [];
   for (const m of NUMERIC_METRICS) {
+    // 养豆天数是"观察规律"而非冲煮时能直接调的旋钮（取决于豆子烘焙日），
+    // 放进可执行的"下次试试"会误导，故跳过；它仍保留在上面的"高分共性"里。
+    if (m.label === "养豆天数") continue;
     const sum = summarizeNumbers(tops.map(m.get).filter((v) => v != null));
     if (sum) suggestParts.push(`${m.label} <b>${m.fmt(sum.median)}</b>`);
   }
@@ -753,6 +759,24 @@ function renderAnalysis() {
       <h3>💡 下次试试</h3>
       <div class="suggest-line">照着你打分最高那几杯的样子：${suggestParts.join("、")}。</div>
     </div>`;
+  }
+
+  // —— 阿哈时刻：引导晒「黄金配方」卡片（自传播引擎）——
+  // 只在「记够 ≥3 杯 且 真算出了高分共性」时才出现：此时用户刚看到自己的规律、
+  // 最有成就感，也才有值得晒的成果。过早引导会让人觉得"我还没东西可晒"。
+  // 晒的是评分最高的那一杯（tops 已按分数降序），即"我最得意的那杯"。
+  if (list.length >= 3 && recipeItems.length > 0) {
+    const topBrew = tops[0];
+    const topBean = findBean(topBrew.beanId);
+    if (topBean) {
+      html += `<div class="share-aha">
+        <div class="share-aha-text">
+          <div class="share-aha-title">📷 晒出你的黄金配方</div>
+          <div class="share-aha-sub">把你最高分的「${esc(topBean.name)}」生成一张配方卡片，发小红书/朋友圈——也帮更多人少踩坑 ☕</div>
+        </div>
+        <button class="btn share-aha-btn" data-share-bean="${topBean.id}" data-share-brew="${topBrew.id}">生成配方卡片</button>
+      </div>`;
+    }
   }
 
   // —— 块③：器具 / 处理法 分类对比 ——
@@ -838,6 +862,7 @@ function initEvents() {
 
   // 分析范围切换 -> 重算分析
   el("#analysis-bean").addEventListener("change", renderAnalysis);
+  el("#analysis-content").addEventListener("click", onAnalysisClick);
 
   // 新增按钮
   el("#btn-add-bean").addEventListener("click", () => openBeanDialog(null));
@@ -909,6 +934,19 @@ function initEvents() {
   el("#btn-import").addEventListener("click", () => el("#file-import").click());
   el("#file-import").addEventListener("change", onImportFile);
 
+  // 「加载演示数据」按钮
+  var demoBtn = el("#btn-demo");
+  if (demoBtn) {
+    demoBtn.addEventListener("click", function () {
+      // 已有真实数据时先确认（演示数据会覆盖当前所有内容）
+      if (state.beans.length > 0 || state.brews.length > 0) {
+        confirmInline(demoBtn, "加载演示数据会【替换】当前所有记录，建议先导出备份。确定继续？", loadDemoData);
+      } else {
+        loadDemoData();
+      }
+    });
+  }
+
   // 「开始冲煮计时」按钮（仅新增冲煮时可见）
   var startTimerBtn = el("#btn-start-timer");
   if (startTimerBtn) {
@@ -949,6 +987,15 @@ function onBrewListClick(e) {
 }
 
 // ----- 详情页点击 -----
+// 分析页点击：目前只处理「生成配方卡片」按钮（复用单豆详情那套分享逻辑）
+function onAnalysisClick(e) {
+  const shareBtn = e.target.closest("[data-share-brew]");
+  if (!shareBtn) return;
+  const _b = state.brews.find(function (x) { return x.id === shareBtn.dataset.shareBrew; });
+  const _bn = findBean(shareBtn.dataset.shareBean);
+  if (_b && _bn) showShareDialog(_bn, _b);
+}
+
 function onDetailClick(e) {
   const editBean = e.target.closest("[data-edit-bean]")?.dataset.editBean;
   const delBean = e.target.closest("[data-del-bean]")?.dataset.delBean;
@@ -1039,8 +1086,11 @@ function deleteBean(id) {
     ? '确定删除「' + (bean ? bean.name : '') + '」？它名下的 ' + count + ' 条冲煮也会一起删除。'
     : '确定删除「' + (bean ? bean.name : '') + '」？此操作无法恢复。';
 
-  // 找到合适的确认条锚点：优先当前页面的卡片或详情头
-  var anchor = document.querySelector('.bean-card[data-bean="' + id + '"]');
+  // 找到合适的确认条锚点：只在豆柜视图可见时才用卡片，否则优先详情头
+  var anchor = null;
+  if (el("#view-beans").classList.contains("is-active")) {
+    anchor = document.querySelector('.bean-card[data-bean="' + id + '"]');
+  }
   if (!anchor) anchor = document.querySelector("#bean-detail-content .detail-head");
   if (!anchor) anchor = document.querySelector("#beans-grid");
   confirmInline(anchor, msg, function () {
@@ -1087,6 +1137,26 @@ function openBrewDialog(id) {
     }
   } else {
     el("#brew-date").value = todayISO(); // 新增时默认今天
+    // 从最近一杯预填不变的值，省重复输入（UX 诊断发现1：老用户每杯重填7+项）
+    if (state.brews.length > 0) {
+      var last = state.brews[state.brews.length - 1];
+      var prefillKeys = ["waterTemp", "grind", "bloomWater", "bloomTime", "gear", "doseGrams", "waterGrams"];
+      for (var i = 0; i < prefillKeys.length; i++) {
+        var k = prefillKeys[i];
+        if (form.elements[k] && last[k] != null) form.elements[k].value = last[k];
+      }
+      // 默认选最近用的豆子
+      if (last.beanId && state.beans.some(function(b) { return b.id === last.beanId; })) {
+        form.elements.beanId.value = last.beanId;
+      }
+      // 闷蒸智能默认：粉量×2
+      if (form.elements.bloomWater && !form.elements.bloomWater.value) {
+        form.elements.bloomWater.value = Math.round((parseFloat(last.doseGrams) || 15) * 2);
+      }
+      if (form.elements.bloomTime && !form.elements.bloomTime.value) {
+        form.elements.bloomTime.value = last.bloomTime || 30;
+      }
+    }
   }
   updateRatingOutput();
   updateBrewPreview();
@@ -1144,6 +1214,7 @@ function onSaveBrew(e) {
   } else {
     const now = Date.now();
     state.brews.push({ id: uid(), createdAt: now, updatedAt: now, ...data });
+    track("first_record"); // 漏斗第 2 环：激活（去重保证只算"第一杯"）
   }
   store.save();
   if (window.SyncClient && SyncClient.enabled()) SyncClient.pushOnly();
@@ -1151,7 +1222,15 @@ function onSaveBrew(e) {
   clearDirty("brew");
   flashButton(el("#brew-form").querySelector('button[type="submit"]'));
   timerResultData = null;
-  showToast("冲煮记录已保存 ☕", "success");
+  // 阿哈进度提示：告诉用户再记几杯就能激活"找规律"引擎（UX 诊断：打断崖②）
+  var toastMsg = "冲煮记录已保存 ☕";
+  if (!editingBrewId && data.rating > 0) {
+    var beanRated = state.brews.filter(function(b) { return b.beanId === data.beanId && b.rating > 0; });
+    if (beanRated.length < 3) {
+      toastMsg += " 再记 " + (3 - beanRated.length) + " 杯就能帮你找出这包豆的最优配方 🎯";
+    }
+  }
+  showToast(toastMsg, "success");
   animateDialogClose(el("#brew-dialog"));
 
   // 如果当前正在看某包豆的详情，刷新它
@@ -1385,6 +1464,7 @@ function initSync() {
 
       if (SyncClient.enabled()) {
         SyncClient.syncNow();
+        track("sync_on"); // 漏斗第 5 环：重度用户（愿意跨设备用）
         updateUI({ type: "ok", text: "已启用" });
         showToast("同步码已保存，正在同步…", "success");
       } else {
@@ -1415,11 +1495,78 @@ function initSync() {
   });
 }
 
+/* ========== 演示数据 ========== */
+// 快速填充几包豆子和冲煮记录，方便截图和新用户了解功能
+// 数据完全覆盖当前内容，已有真实数据的用户会先弹确认
+function loadDemoData() {
+  var now = Date.now();
+  // 基准日期：用"今天"倒推，让养豆天数看起来真实
+  var T = todayISO;
+  // 过去 N 天的日期
+  function ago(n) {
+    var d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  var b1 = uid(); // 耶加雪菲
+  var b2 = uid(); // 哥伦比亚
+  var b3 = uid(); // 曼特宁
+
+  state = {
+    version: 1,
+    beans: [
+      { id: b1, name: '耶加雪菲 科契尔 G1', roaster: '少数派咖啡', roastDate: ago(20), roastLevel: '浅', origin: '埃塞俄比亚 耶加雪菲', process: '水洗', weightGrams: 200, price: 88, createdAt: now - 20*86400000, updatedAt: now - 20*86400000 },
+      { id: b2, name: '哥伦比亚 蕙兰  supremo', roaster: '分子咖啡', roastDate: ago(10), roastLevel: '中', origin: '哥伦比亚 蕙兰', process: '水洗', weightGrams: 200, price: 68, createdAt: now - 10*86400000, updatedAt: now - 10*86400000 },
+      { id: b3, name: '黄金曼特宁 湿刨', roaster: '明谦咖啡', roastDate: ago(30), roastLevel: '中深', origin: '印尼 苏门答腊', process: '湿刨', weightGrams: 250, price: 55, createdAt: now - 30*86400000, updatedAt: now - 30*86400000 },
+    ],
+    brews: [
+      // 耶加雪菲 · 4 杯——有高分有低分，能看出规律
+      { id: uid(), beanId: b1, brewDate: ago(13), doseGrams: 15, waterGrams: 225, waterTemp: 92, grind: 'C40 22格', bloomWater: 30, bloomTime: 30, totalTime: '2:30', gear: 'V60 + 云朵壶', rating: 8.5, notes: '柑橘酸质明亮，尾韵有茉莉花香，甜感不错', tasteIssues: [], stages: [], createdAt: now - 13*86400000, updatedAt: now - 13*86400000 },
+      { id: uid(), beanId: b1, brewDate: ago(10), doseGrams: 15, waterGrams: 225, waterTemp: 91, grind: 'C40 20格', bloomWater: 30, bloomTime: 30, totalTime: '2:45', gear: 'V60 + 云朵壶', rating: 6.0, notes: '入口偏酸，层次感弱，不够甜', tasteIssues: ['酸'], stages: [], createdAt: now - 10*86400000, updatedAt: now - 10*86400000 },
+      { id: uid(), beanId: b1, brewDate: ago(6),  doseGrams: 15, waterGrams: 240, waterTemp: 93, grind: 'C40 24格', bloomWater: 30, bloomTime: 35, totalTime: '2:15', gear: 'V60 + 云朵壶', rating: 9.0, notes: '花香炸裂！柑橘和蜂蜜的甜感完美平衡，酸质柔和', tasteIssues: [], stages: [], createdAt: now - 6*86400000, updatedAt: now - 6*86400000 },
+      { id: uid(), beanId: b1, brewDate: ago(3),  doseGrams: 16, waterGrams: 240, waterTemp: 92, grind: 'C40 22格', bloomWater: 32, bloomTime: 30, totalTime: '2:30', gear: 'V60 + 云朵壶', rating: 7.5, notes: '比上次差一点，可能是粉多了，浓度偏高了一些', tasteIssues: ['浓'], stages: [], createdAt: now - 3*86400000, updatedAt: now - 3*86400000 },
+
+      // 哥伦比亚 · 2 杯——一杯好一杯翻车
+      { id: uid(), beanId: b2, brewDate: ago(6),  doseGrams: 16, waterGrams: 240, waterTemp: 90, grind: 'C40 24格', bloomWater: 32, bloomTime: 30, totalTime: '2:40', gear: 'Kalita 蛋糕杯', rating: 8.0, notes: '焦糖甜感突出，坚果尾韵悠长，醇厚度刚好', tasteIssues: [], stages: [], createdAt: now - 6*86400000, updatedAt: now - 6*86400000 },
+      { id: uid(), beanId: b2, brewDate: ago(4),  doseGrams: 16, waterGrams: 240, waterTemp: 96, grind: 'C40 20格', bloomWater: 30, bloomTime: 25, totalTime: '2:55', gear: 'Kalita 蛋糕杯', rating: 5.5, notes: '又苦又涩，完全喝不到甜感，温度太高把苦味全萃出来了', tasteIssues: ['苦', '涩'], stages: [], createdAt: now - 4*86400000, updatedAt: now - 4*86400000 },
+
+      // 曼特宁 · 2 杯
+      { id: uid(), beanId: b3, brewDate: ago(8),  doseGrams: 15, waterGrams: 210, waterTemp: 88, grind: 'C40 26格', bloomWater: 30, bloomTime: 25, totalTime: '2:20', gear: '法兰绒', rating: 7.0, notes: '醇厚但有点沉闷，酸度不足，下次试试提高水温', tasteIssues: [], stages: [], createdAt: now - 8*86400000, updatedAt: now - 8*86400000 },
+      { id: uid(), beanId: b3, brewDate: ago(1),  doseGrams: 15, waterGrams: 210, waterTemp: 90, grind: 'C40 24格', bloomWater: 30, bloomTime: 30, totalTime: '2:15', gear: '法兰绒', rating: 8.5, notes: '黑巧克力 + 焦糖，醇厚度完美，曼特宁就该这个味', tasteIssues: [], stages: [], createdAt: now - 1*86400000, updatedAt: now - 1*86400000 },
+    ],
+    tombstones: { beans: {}, brews: {} },
+  };
+  store.save();
+  renderAll();
+  if (typeof renderAnalysis === 'function') renderAnalysis();
+  showToast('已加载 3 包豆子 + 8 杯记录，随便看看～', 'success');
+}
+
+/* ========== 极简隐私统计：里程碑打点 ========== */
+// 只在关键里程碑上报，且每个浏览器对每个事件只报一次（localStorage 去重），
+// 所以数据库写入量极低。完全不阻塞、永不报错：网络或接口出问题就静默跳过，
+// 绝不影响 App 正常使用。后端只存「计数」，不碰 IP、不写 Cookie、零个人信息。
+function track(event) {
+  try {
+    var flag = "_t_" + event;
+    if (localStorage.getItem(flag)) return; // 这个浏览器已报过该事件，跳过
+    localStorage.setItem(flag, "1");
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: event }),
+      keepalive: true, // 即使页面正在关闭也尽量把这一下发出去
+    }).catch(function () {});
+  } catch (e) { /* localStorage 被禁等情况，直接放弃，不影响主流程 */ }
+}
+
 /* ========== 启动 ========== */
 store.load();
 initEvents();
 renderAll();
 initSync();
+track("visit"); // 漏斗第 1 环：独立访客
 // 初始标签指示器位置
 (function () {
   var activeTab = document.querySelector(".tab.is-active");
