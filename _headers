@@ -1,0 +1,9 @@
+# Cloudflare Pages 头部规则：防止浏览器/CDN 缓存 HTML 和 SW，保证每次拿最新版
+/index.html
+  Cache-Control: no-cache
+
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
