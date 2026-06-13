@@ -258,6 +258,12 @@
         <textarea name="notes" rows="3" placeholder="酸甜苦、干净度、口感、香气，以及下次想调整什么…"></textarea>
       </label>
 
+      <!-- 风味轮：正向结构化记录「好喝在哪」 -->
+      <div class="flavor-wheel-row">
+        <button type="button" id="btn-flavor-wheel" class="flavor-wheel-btn">🎡 选风味</button>
+        <div id="flavor-selected-tags" class="flavor-tags-preview"><!-- JS 填充已选标签 --></div>
+      </div>
+
       <!-- 这杯哪里不对（可多选）—— 勾了下面会实时给「下次怎么调」的方向 -->
       <fieldset class="taste-field">
         <legend>这杯哪里不对？（可多选，留空表示没毛病）</legend>
@@ -340,10 +346,29 @@
     </div>
   </div>
 
+  <!-- ============ 风味轮弹窗（全屏 overlay） ============ -->
+  <dialog id="wheel-dialog" class="dialog wheel-dialog-fullscreen" role="dialog" aria-modal="true" aria-label="咖啡风味轮">
+    <div class="wheel-dialog-inner">
+      <div class="wheel-header">
+        <span class="wheel-title">🎡 选择风味</span>
+        <button type="button" id="wheel-close-btn" class="wheel-close-btn" aria-label="关闭">✕</button>
+      </div>
+      <div id="wheel-svg-container" class="wheel-svg-container">
+        <!-- wheel.js 填充 SVG -->
+      </div>
+      <div id="wheel-hint" class="wheel-hint" aria-live="polite"></div>
+      <div class="wheel-footer">
+        <button type="button" id="wheel-back-btn" class="btn btn-ghost wheel-nav-btn" style="display:none">← 收起</button>
+        <button type="button" id="wheel-done-btn" class="btn btn-solid wheel-nav-btn">完成</button>
+      </div>
+    </div>
+  </dialog>
+
   <script src="merge.js?v=7"></script>
   <script src="sync.js?v=7"></script>
   <script src="timer.js?v=7"></script>
   <script src="app.js?v=9"></script>
+  <script src="wheel.js?v=2"></script>
   <script src="share.js?v=9"></script>
 
   <!-- 注册 Service Worker：让程序能离线打开（仅在网址 http/https 下生效，本地双击会自动跳过） -->

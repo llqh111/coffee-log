@@ -266,6 +266,71 @@ const TASTE_ISSUES = [
   { key: "astringent", label: "涩 / 收敛",   advice: "研磨调粗一点 / 水温略降 / 注水轻柔一点（少搅拌）" },
 ];
 
+/* ========== 1.6) 风味轮词库（SCA 官方配色，存 key 不存中文） ========== */
+const FLAVOR_WHEEL = [
+  { key: "floral",       label: "花香",     labelEn: "Floral",          color: "#C084FC", children: [
+    { key: "black_tea",    label: "红茶",    labelEn: "Black Tea" },
+    { key: "chamomile",    label: "洋甘菊",  labelEn: "Chamomile" },
+    { key: "rose",         label: "玫瑰",    labelEn: "Rose" },
+    { key: "jasmine",      label: "茉莉",    labelEn: "Jasmine" },
+    { key: "osmanthus",    label: "桂花",    labelEn: "Osmanthus" },
+  ]},
+  { key: "fruity",       label: "果香",     labelEn: "Fruity",          color: "#F87171", children: [
+    { key: "berry",        label: "莓果",    labelEn: "Berry" },
+    { key: "dried_fruit",  label: "干果",    labelEn: "Dried Fruit" },
+    { key: "citrus",       label: "柑橘",    labelEn: "Citrus" },
+    { key: "stone_fruit",  label: "核果",    labelEn: "Stone Fruit" },
+    { key: "tropical",     label: "热带水果",labelEn: "Tropical" },
+    { key: "apple_pear",   label: "苹果梨",  labelEn: "Apple·Pear" },
+    { key: "grape",        label: "葡萄",    labelEn: "Grape" },
+  ]},
+  { key: "sour_ferment", label: "酸/发酵",  labelEn: "Sour/Fermented",  color: "#FBBF24", children: [
+    { key: "sour",         label: "酸香",    labelEn: "Sour" },
+    { key: "winey",        label: "酒香",    labelEn: "Winey" },
+    { key: "fermented",    label: "发酵",    labelEn: "Fermented" },
+    { key: "overripe",     label: "熟透",    labelEn: "Overripe" },
+  ]},
+  { key: "green_veg",    label: "绿色/植物",labelEn: "Green/Vegetative", color: "#4ADE80", children: [
+    { key: "vegetative",   label: "植物",    labelEn: "Vegetative" },
+    { key: "grassy",       label: "青草",    labelEn: "Grassy" },
+    { key: "herb",         label: "草本",    labelEn: "Herb-like" },
+    { key: "beany",        label: "豆子",    labelEn: "Beany" },
+  ]},
+  { key: "other",        label: "其他",     labelEn: "Other",           color: "#67E8F9", children: [
+    { key: "papery",       label: "纸质/陈旧",labelEn: "Papery-Musty" },
+    { key: "chemical",     label: "化学",    labelEn: "Chemical" },
+    { key: "pungent",      label: "刺激",    labelEn: "Pungent" },
+    { key: "rubber",       label: "橡胶",    labelEn: "Rubber" },
+  ]},
+  { key: "roasted",      label: "烘焙",     labelEn: "Roasted",         color: "#FB923C", children: [
+    { key: "cereal",       label: "谷物",    labelEn: "Cereal" },
+    { key: "burnt",        label: "焦香",    labelEn: "Burnt" },
+    { key: "tobacco",      label: "烟草",    labelEn: "Tobacco" },
+    { key: "smoky",        label: "烟熏",    labelEn: "Smoky" },
+  ]},
+  { key: "spices",       label: "香料",     labelEn: "Spices",          color: "#B45309", children: [
+    { key: "pungent_spice",label: "辛辣",    labelEn: "Pungent" },
+    { key: "pepper",       label: "胡椒",    labelEn: "Pepper" },
+    { key: "brown_spice",  label: "棕色香料",labelEn: "Brown Spice" },
+    { key: "anise",        label: "茴香",    labelEn: "Anise" },
+  ]},
+  { key: "nutty_cocoa",  label: "坚果/可可",labelEn: "Nutty/Cocoa",    color: "#92400E", children: [
+    { key: "nutty",        label: "坚果",    labelEn: "Nutty" },
+    { key: "hazelnut",     label: "榛子",    labelEn: "Hazelnut" },
+    { key: "almond",       label: "杏仁",    labelEn: "Almond" },
+    { key: "cocoa",        label: "可可",    labelEn: "Cocoa" },
+    { key: "dark_chocolate",label: "黑巧克力",labelEn: "Dark Chocolate" },
+  ]},
+  { key: "sweet",        label: "甜",       labelEn: "Sweet",           color: "#F59E0B", children: [
+    { key: "caramel",      label: "焦糖",    labelEn: "Caramel" },
+    { key: "honey",        label: "蜂蜜",    labelEn: "Honey" },
+    { key: "brown_sugar",  label: "红糖",    labelEn: "Brown Sugar" },
+    { key: "vanilla",      label: "香草",    labelEn: "Vanilla" },
+    { key: "maple",        label: "枫糖",    labelEn: "Maple Syrup" },
+    { key: "overall_sweet",label: "整体甜感",labelEn: "Overall Sweet" },
+  ]},
+];
+
 // 一条冲煮勾选的味道 → 标签列表（用于显示小标签 chips）
 function tasteLabels(brew) {
   const issues = brew.tasteIssues || []; // 老记录没这字段，兜底空数组
@@ -426,6 +491,7 @@ function brewCardHTML(brew, showBean) {
         <div class="brew-meta">${meta || '<span class="brew-date">（未填更多参数）</span>'}</div>
         ${brew.notes ? `<div class="brew-notes">“${esc(brew.notes)}”</div>` : ""}
         ${tasteChipsHTML(brew)}
+        ${flavorChipsHTML(brew)}
         ${adviceBlockHTML(brew)}
       </div>
       <div class="brew-side">
@@ -457,6 +523,47 @@ function tasteChipsHTML(brew) {
   return `<div class="taste-chips">${
     labels.map((l) => `<span class="taste-chip">${esc(l)}</span>`).join("")
   }</div>`;
+}
+
+/* ----- 风味轮辅助 ----- */
+
+// 把所有子风味摊平（带上大类颜色），方便 key 查找
+function flatFlavors() {
+  return FLAVOR_WHEEL.flatMap((cat) =>
+    cat.children.map((c) => ({ ...c, catColor: cat.color }))
+  );
+}
+
+// 卡片上渲染风味标签 HTML
+function flavorChipsHTML(brew) {
+  const selected = brew.flavors || [];
+  if (!selected.length) return "";
+  const flat = flatFlavors();
+  const chips = selected
+    .map((k) => flat.find((f) => f.key === k))
+    .filter(Boolean);
+  if (!chips.length) return "";
+  return `<div class="flavor-chips">${
+    chips.map((c) =>
+      `<span class="flavor-chip" style="--chip-color:${c.catColor}">${esc(c.label)}</span>`
+    ).join("")
+  }</div>`;
+}
+
+// 在表单内实时渲染已选风味标签（带 ✕ 删除按钮）
+function renderFlavorPreviewTags() {
+  const container = el("#flavor-selected-tags");
+  if (!container) return;
+  if (!currentFlavorSelection.length) { container.innerHTML = ""; return; }
+  const flat = flatFlavors();
+  container.innerHTML = currentFlavorSelection
+    .map((key) => {
+      const chip = flat.find((f) => f.key === key);
+      if (!chip) return "";
+      return `<span class="flavor-chip" style="--chip-color:${chip.catColor}">${esc(chip.label)}<button type="button" class="flavor-chip-remove" data-remove-flavor="${esc(key)}" aria-label="移除${esc(chip.label)}">✕</button></span>`;
+    })
+    .filter(Boolean)
+    .join("");
 }
 
 // 「💡 下次试试」建议块（每个有建议的味道一行）
@@ -814,6 +921,7 @@ function compareGroupHTML(title, rows) {
 // 当前正在编辑的记录 id（null = 新增）
 let editingBeanId = null;
 let editingBrewId = null;
+let currentFlavorSelection = []; // 风味轮：当前编辑/新建冲煮的已选 key 数组
 
 // 计时器回传的暂存数据（保存前临时持有 stages + 总时间）
 var timerResultData = null;
@@ -925,6 +1033,25 @@ function initEvents() {
   // 味道复选框：先渲染出来，再监听勾选 -> 实时更新建议
   renderTasteOptions();
   el("#taste-options").addEventListener("change", updateTastePreview);
+
+  // 风味轮：移除已选标签（表单内 ✕ 按钮）
+  el("#brew-form").addEventListener("click", function (e) {
+    const removeKey = e.target.closest("[data-remove-flavor]")?.dataset.removeFlavor;
+    if (removeKey) {
+      currentFlavorSelection = currentFlavorSelection.filter((k) => k !== removeKey);
+      renderFlavorPreviewTags();
+    }
+  });
+
+  // 风味轮：打开圆盘弹窗
+  el("#btn-flavor-wheel")?.addEventListener("click", function () {
+    if (typeof openWheelDialog === "function") {
+      openWheelDialog(currentFlavorSelection, function (selected) {
+        currentFlavorSelection = selected;
+        renderFlavorPreviewTags();
+      });
+    }
+  });
 
   // 导出 / 导入
   el("#btn-export").addEventListener("click", function () {
@@ -1134,9 +1261,14 @@ function openBrewDialog(id) {
       // 回显勾选的味道问题
       const issues = brew.tasteIssues || [];
       form.querySelectorAll('input[name="taste"]').forEach((cb) => (cb.checked = issues.includes(cb.value)));
+      // 回显风味轮选择
+      currentFlavorSelection = brew.flavors || [];
+      renderFlavorPreviewTags();
     }
   } else {
     el("#brew-date").value = todayISO(); // 新增时默认今天
+    currentFlavorSelection = [];
+    renderFlavorPreviewTags();
     // 从最近一杯预填不变的值，省重复输入（UX 诊断发现1：老用户每杯重填7+项）
     if (state.brews.length > 0) {
       var last = state.brews[state.brews.length - 1];
@@ -1189,6 +1321,7 @@ function onSaveBrew(e) {
     gear: f.gear.value.trim(),
     rating: parseFloat(f.rating.value) || 0,
     notes: f.notes.value.trim(),
+    flavors: selectedFlavorKeys(),
     tasteIssues: checkedTasteKeys(),
     stages: timerResultData || [],
   };
@@ -1286,6 +1419,11 @@ function renderTasteOptions() {
 // 当前勾了哪些味道（读复选框）
 function checkedTasteKeys() {
   return [...el("#brew-form").querySelectorAll('input[name="taste"]:checked')].map((cb) => cb.value);
+}
+
+// 当前风味轮已选 key 列表
+function selectedFlavorKeys() {
+  return currentFlavorSelection || [];
 }
 
 // 按当前勾选，实时刷新弹窗里的「下次试试」
